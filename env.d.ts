@@ -11,8 +11,11 @@ declare global {
     SESSION_SECRET: string;
     PUBLIC_STORE_DOMAIN: string;
     PUBLIC_STOREFRONT_API_TOKEN: string;
+    PUBLIC_STOREFRONT_ID: string;
+    PUBLIC_CHECKOUT_DOMAIN: string;
     PUBLIC_SUPABASE_URL: string;
     PUBLIC_SUPABASE_ANON_KEY: string;
     SUPABASE_SERVICE_ROLE_KEY: string;
+    ASSETS?: Fetcher;
   }
 }

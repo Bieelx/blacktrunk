@@ -18,7 +18,7 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
         <span className="cart-total-label">Total:</span>
         <span className="cart-total-value">
           {cart?.cost?.subtotalAmount?.amount ? (
-            <Money data={cart.cost.subtotalAmount} />
+            <Money data={cart.cost.subtotalAmount} as="span" />
           ) : (
             '-'
           )}

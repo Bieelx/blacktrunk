@@ -189,7 +189,7 @@ function BestsellerItem({product}: {product: BestsellerProduct}) {
       <div className="bestseller-item-info">
         <p className="bestseller-item-title">{product.title}</p>
         <p className="bestseller-item-price">
-          <Money data={price} />
+          <Money data={price} as="span" />
         </p>
       </div>
     </Link>

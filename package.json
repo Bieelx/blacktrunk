@@ -10,11 +10,11 @@
     "preview": "shopify hydrogen preview --build",
     "lint": "eslint --no-error-on-unmatched-pattern .",
     "typecheck": "react-router typegen && tsc --noEmit",
-    "codegen": "shopify hydrogen codegen && react-router typegen"
+    "codegen": "shopify hydrogen codegen && react-router typegen",
+    "deploy:cf": "npm run build && wrangler deploy"
   },
   "prettier": "@shopify/prettier-config",
   "dependencies": {
-    "@rolldown/binding-darwin-arm64": "^1.0.0-rc.17",
     "@shopify/hydrogen": "2026.4.2",
     "@supabase/supabase-js": "^2.105.4",
     "embla-carousel-autoplay": "^8.6.0",
@@ -58,7 +58,8 @@
     "graphql-config": "^5.0.3",
     "prettier": "^3.4.2",
     "typescript": "^5.9.2",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "wrangler": "^4.0.0"
   },
   "engines": {
     "node": "^22 || ^24"
