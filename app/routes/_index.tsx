@@ -1,6 +1,6 @@
 import {Await, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/_index';
-import {Suspense, useEffect, useRef} from 'react';
+import {Suspense, useEffect, useRef, useState} from 'react';
 import {Image, Money} from '@shopify/hydrogen';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
@@ -113,12 +113,11 @@ function BestsellersSection({
 }: {
   products: Promise<RecommendedProductsQuery | null>;
 }) {
-  const [emblaRef] = useEmblaCarousel({
-    align: 'start',
-    dragFree: true,
-    loop: false,
-    containScroll: 'trimSnaps',
-  });
+  const autoplay = useRef(Autoplay({delay: 10000, stopOnInteraction: false}));
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    {align: 'start', dragFree: true, loop: true},
+    [autoplay.current],
+  );
 
   return (
     <section className="bestsellers-section">
@@ -128,23 +127,39 @@ function BestsellersSection({
           Escolhidos por quem treina de verdade
         </p>
       </div>
-      <Suspense fallback={<div className="section-loading">Carregando...</div>}>
-        <Await resolve={products}>
-          {(response) => (
-            <div className="bestsellers-embla" ref={emblaRef}>
-              <div className="bestsellers-embla-container">
-                {response
-                  ? response.products.nodes.map((product) => (
-                      <div key={product.id} className="bestsellers-embla-slide">
-                        <BestsellerItem product={product} />
-                      </div>
-                    ))
-                  : null}
+      <div className="bestsellers-carousel-wrapper">
+        <Suspense fallback={<div className="section-loading">Carregando...</div>}>
+          <Await resolve={products}>
+            {(response) => (
+              <div className="bestsellers-embla" ref={emblaRef}>
+                <div className="bestsellers-embla-container">
+                  {response
+                    ? response.products.nodes.map((product) => (
+                        <div key={product.id} className="bestsellers-embla-slide">
+                          <BestsellerItem product={product} />
+                        </div>
+                      ))
+                    : null}
+                </div>
               </div>
-            </div>
-          )}
-        </Await>
-      </Suspense>
+            )}
+          </Await>
+        </Suspense>
+        <button
+          className="bestsellers-nav bestsellers-nav-prev"
+          onClick={() => emblaApi?.scrollPrev()}
+          aria-label="Anterior"
+        >
+          &#8249;
+        </button>
+        <button
+          className="bestsellers-nav bestsellers-nav-next"
+          onClick={() => emblaApi?.scrollNext()}
+          aria-label="Próximo"
+        >
+          &#8250;
+        </button>
+      </div>
       <div className="section-cta">
         <Link to="/collections" className="btn-loja">
           VER LOJA &rarr;
@@ -405,30 +420,88 @@ function Leaderboard({
 }
 
 const QUALITY_FEATURES = [
-  {num: '01', title: 'Alta Durabilidade', desc: 'Tecido resistente para treinos intensos'},
-  {num: '02', title: 'Conforto Total', desc: 'Modelagem que acompanha cada movimento'},
-  {num: '03', title: 'Design Exclusivo', desc: 'Estampas criadas para atletas de verdade'},
-  {num: '04', title: 'Máximo Desempenho', desc: 'Tecnologia têxtil de ponta'},
+  {
+    num: 1,
+    title: 'Fibras Tecnológicas',
+    desc: 'Nossas camisetas combinam algodão premium com elastano de última geração, criando um tecido projetado para máximo desempenho e durabilidade. Cada detalhe foi cuidadosamente pensado para oferecer um toque de sofisticação, conforto absoluto e liberdade de movimento.',
+    img: '/images/home/fibras_tecnologicas.png',
+  },
+  {
+    num: 2,
+    title: 'Controle de Umidade',
+    desc: 'Desenvolvemos uma tecnologia avançada que absorve e evapora o suor rapidamente, garantindo frescor e conforto em todas as situações. Feitas para acompanhar o ritmo do seu dia com elegância e eficiência.',
+    img: '/images/home/controle_umidade.png',
+  },
+  {
+    num: 3,
+    title: 'Conforto Refinado',
+    desc: 'Um tecido que se molda ao seu corpo, combinando leveza, respirabilidade e um toque macio. Cada peça é projetada para oferecer o equilíbrio perfeito entre estilo e funcionalidade, pensado exclusivamente para o seu conforto e bem-estar.',
+    img: '/images/home/conforto_refinado.png',
+  },
+  {
+    num: 4,
+    title: 'Design Ergonômico',
+    desc: 'Modelagem que acompanha os contornos do corpo, garantindo caimento perfeito e liberdade de movimento. Cada detalhe foi pensado para unir estilo, funcionalidade e performance, com foco no máximo conforto.',
+    img: '/images/home/design_ergonomico.png',
+  },
+  {
+    num: 5,
+    title: 'Durabilidade Premium',
+    desc: 'Tecido resistente ao desgaste, projetado para manter a forma e a qualidade mesmo após inúmeras lavagens. Uma peça criada para durar e acompanhar você em todos os momentos.',
+    img: '/images/home/durabilidade_premium.png',
+  },
 ];
 
 function QualitySection() {
+  const [active, setActive] = useState(0);
+  const feature = QUALITY_FEATURES[active];
+
   return (
     <section className="quality-section">
       <div className="section-header">
         <h2 className="section-title">QUALIDADE BLACKTRUNK</h2>
         <p className="section-tagline">
           Camisetas criadas para máximo desempenho e conforto, feitas para quem
-          enfrenta qualquer desafio dentro e fora da academia
+          encara qualquer desafio dentro e fora da academia
         </p>
       </div>
-      <div className="quality-grid">
-        {QUALITY_FEATURES.map((f) => (
-          <div key={f.num} className="quality-card">
-            <span className="quality-num">{f.num}</span>
-            <h3 className="quality-title">{f.title}</h3>
-            <p className="quality-desc">{f.desc}</p>
-          </div>
+
+      <div className="quality-fan">
+        {QUALITY_FEATURES.map((f, i) => (
+          <button
+            key={f.num}
+            className={`quality-fan-pill${active === i ? ' active' : ''}`}
+            onClick={() => setActive(i)}
+            aria-label={f.title}
+          >
+            <img src={f.img} alt={f.title} />
+            <span className="quality-fan-num">{f.num}</span>
+          </button>
         ))}
+      </div>
+
+      <div className="quality-tabs">
+        {QUALITY_FEATURES.map((f, i) => (
+          <button
+            key={f.num}
+            className={`quality-tab${active === i ? ' active' : ''}`}
+            onClick={() => setActive(i)}
+          >
+            {f.num}
+          </button>
+        ))}
+      </div>
+
+      <div className="quality-content">
+        <div className="quality-content-card">
+          <div className="quality-content-text">
+            <h3 className="quality-content-title">{feature.title}</h3>
+            <p className="quality-content-desc">{feature.desc}</p>
+          </div>
+          <div className="quality-content-img-wrap">
+            <img src={feature.img} alt={feature.title} className="quality-content-img" />
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -138,7 +138,7 @@ function SubmitForm() {
   }
 
   return (
-    <section className="excl-form-section">
+    <section className="excl-form-section" id="enviar-video">
       <div className="excl-form-header">
         <span className="excl-form-badge">PROVE SEU VALOR</span>
         <h2 className="excl-form-title">ENVIE SEU VÍDEO</h2>
@@ -361,13 +361,21 @@ export default function ExclusivasPage() {
                     </span>
                   ))}
                 </h2>
-                {isUnlocked && (
+                {isUnlocked ? (
                   <Link
                     to={`/products/${EXCLUSIVE_PRODUCT_HANDLES[item.key as ExclusiveKey]}`}
                     className="excl-card-cta btn-white"
                   >
                     Comprar agora
                   </Link>
+                ) : (
+                  <a href="#enviar-video" className="excl-card-unlock-btn">
+                    Desbloquear
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                    </svg>
+                  </a>
                 )}
               </div>
             );

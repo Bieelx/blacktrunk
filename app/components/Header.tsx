@@ -1,4 +1,4 @@
-import {Suspense, useState, useEffect, useRef} from 'react';
+import {Suspense, useState, useEffect, useRef, useCallback} from 'react';
 import {Await, NavLink, useAsyncValue} from 'react-router';
 import {
   type CartViewPayload,
@@ -26,6 +26,9 @@ export function Header({
 }: HeaderProps) {
   const {shop, menu} = header;
   const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 80);
@@ -33,23 +36,74 @@ export function Header({
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
+
+  const close = useCallback(() => {
+    setIsClosing(true);
+    closeTimer.current = setTimeout(() => {
+      setMobileOpen(false);
+      setIsClosing(false);
+    }, 200);
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (!mobileOpen) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setIsClosing(false);
+      setMobileOpen(true);
+    } else {
+      close();
+    }
+  }, [mobileOpen, close]);
+
+  const headerClass = [
+    'header',
+    scrolled ? 'header--scrolled' : '',
+    mobileOpen ? 'header--mobile-open' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <header className={scrolled ? 'header header--scrolled' : 'header'}>
-      <NavLink prefetch="intent" to="/" className="header-logo" end>
-        {shop.name.toUpperCase()}
-        <BtSymbol size={28} />
-      </NavLink>
-      <HeaderMenu
-        menu={menu}
-        viewport="desktop"
-        primaryDomainUrl={header.shop.primaryDomain.url}
-        publicStoreDomain={publicStoreDomain}
-      />
-      <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
-    </header>
+    <>
+      <header className={headerClass}>
+        <div className="header-row">
+          <NavLink prefetch="intent" to="/" className="header-logo" end>
+            {shop.name.toUpperCase()}
+            <BtSymbol size={28} />
+          </NavLink>
+          <HeaderMenu
+            menu={menu}
+            viewport="desktop"
+            primaryDomainUrl={header.shop.primaryDomain.url}
+            publicStoreDomain={publicStoreDomain}
+          />
+          <HeaderCtas
+            isLoggedIn={isLoggedIn}
+            cart={cart}
+            mobileOpen={mobileOpen}
+            isClosing={isClosing}
+            onMobileToggle={toggle}
+          />
+        </div>
+        {mobileOpen && (
+          <MobileNavPanel
+            isLoggedIn={isLoggedIn}
+            isClosing={isClosing}
+            onClose={close}
+          />
+        )}
+      </header>
+      {mobileOpen && (
+        <div
+          className={`mobile-nav-overlay${isClosing ? ' mobile-nav-overlay--closing' : ''}`}
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
+    </>
   );
 }
-
 
 export function HeaderMenu({
   menu,
@@ -105,6 +159,112 @@ export function HeaderMenu({
         );
       })}
     </nav>
+  );
+}
+
+function MobileNavPanel({
+  isLoggedIn,
+  isClosing,
+  onClose,
+}: {
+  isLoggedIn: Promise<boolean>;
+  isClosing: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className={`mobile-nav-panel${isClosing ? ' mobile-nav-panel--closing' : ''}`}>
+      <nav className="mobile-nav-links">
+        <NavLink
+          to="/"
+          end
+          prefetch="intent"
+          onClick={onClose}
+          className={({isActive}) =>
+            isActive ? 'mobile-nav-link active' : 'mobile-nav-link'
+          }
+        >
+          Início
+        </NavLink>
+        <NavLink
+          to="/collections/all"
+          prefetch="intent"
+          onClick={onClose}
+          className={({isActive}) =>
+            isActive ? 'mobile-nav-link active' : 'mobile-nav-link'
+          }
+        >
+          Loja
+        </NavLink>
+        <NavLink
+          to="/exclusivas"
+          prefetch="intent"
+          onClick={onClose}
+          className={({isActive}) =>
+            isActive ? 'mobile-nav-link active' : 'mobile-nav-link'
+          }
+        >
+          Exclusivas
+        </NavLink>
+        <NavLink
+          to="/ranking"
+          prefetch="intent"
+          onClick={onClose}
+          className={({isActive}) =>
+            isActive ? 'mobile-nav-link active' : 'mobile-nav-link'
+          }
+        >
+          Ranking
+        </NavLink>
+      </nav>
+      <div className="mobile-nav-auth">
+        <Suspense
+          fallback={
+            <NavLink
+              to="/account/login"
+              className="mobile-nav-auth-login"
+              onClick={onClose}
+              prefetch="intent"
+            >
+              Fazer Login
+            </NavLink>
+          }
+        >
+          <Await resolve={isLoggedIn}>
+            {(loggedIn) =>
+              loggedIn ? (
+                <NavLink
+                  to="/account"
+                  className="mobile-nav-auth-login"
+                  onClick={onClose}
+                  prefetch="intent"
+                >
+                  Minha Conta
+                </NavLink>
+              ) : (
+                <>
+                  <NavLink
+                    to="/account/login"
+                    className="mobile-nav-auth-login"
+                    onClick={onClose}
+                    prefetch="intent"
+                  >
+                    Fazer Login
+                  </NavLink>
+                  <NavLink
+                    to="/account/register"
+                    className="mobile-nav-auth-register"
+                    onClick={onClose}
+                    prefetch="intent"
+                  >
+                    Criar Conta
+                  </NavLink>
+                </>
+              )
+            }
+          </Await>
+        </Suspense>
+      </div>
+    </div>
   );
 }
 
@@ -187,12 +347,22 @@ function AccountDropdown({isLoggedIn}: {isLoggedIn: Promise<boolean>}) {
 function HeaderCtas({
   isLoggedIn,
   cart,
-}: Pick<HeaderProps, 'isLoggedIn' | 'cart'>) {
+  mobileOpen,
+  isClosing,
+  onMobileToggle,
+}: Pick<HeaderProps, 'isLoggedIn' | 'cart'> & {
+  mobileOpen: boolean;
+  isClosing: boolean;
+  onMobileToggle: () => void;
+}) {
   return (
     <nav className="header-ctas" role="navigation">
       <CartToggle cart={cart} />
       <AccountDropdown isLoggedIn={isLoggedIn} />
-      <HeaderMenuMobileToggle />
+      <HeaderMenuMobileToggle
+        isOpen={mobileOpen && !isClosing}
+        onToggle={onMobileToggle}
+      />
     </nav>
   );
 }
@@ -215,26 +385,33 @@ function AccountIcon() {
   );
 }
 
-function HeaderMenuMobileToggle() {
-  const {open} = useAside();
+function HeaderMenuMobileToggle({
+  isOpen,
+  onToggle,
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
   return (
     <button
-      className="header-menu-mobile-toggle reset"
-      onClick={() => open('mobile')}
-      aria-label="Abrir menu"
+      className={`header-menu-mobile-toggle reset${isOpen ? ' is-open' : ''}`}
+      onClick={onToggle}
+      aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
+      aria-expanded={isOpen}
     >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <line x1="3" y1="12" x2="21" y2="12" />
-        <line x1="3" y1="18" x2="21" y2="18" />
-      </svg>
+      <span className="toggle-icon toggle-icon--hamburger">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </span>
+      <span className="toggle-icon toggle-icon--close">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </span>
     </button>
   );
 }

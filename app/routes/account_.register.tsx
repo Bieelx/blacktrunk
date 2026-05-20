@@ -87,6 +87,12 @@ export default function Register() {
 
   return (
     <div className="reg-page">
+      <Link to="/" className="reg-close-btn" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </Link>
+
       {/* ── LEFT PANEL ── */}
       <div className="reg-left">
         <div className="reg-watermark" aria-hidden>
