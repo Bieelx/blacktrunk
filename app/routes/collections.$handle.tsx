@@ -1,3 +1,4 @@
+import {useState, useRef} from 'react';
 import {redirect, useLoaderData} from 'react-router';
 import {Link} from 'react-router';
 import {useAside} from '~/components/Aside';
@@ -269,12 +270,21 @@ function PlpCard({
         : false
     : true;
 
-  return (
-    <Link
-      to={variantUrl}
-      className={`plp-card${isExclusiva && !isUnlocked ? ' plp-card--locked' : ''}`}
-      prefetch="intent"
-    >
+  const [shaking, setShaking] = useState(false);
+  const shakingRef = useRef(false);
+
+  const handleLockedClick = () => {
+    if (shakingRef.current) return;
+    shakingRef.current = true;
+    setShaking(true);
+    setTimeout(() => {
+      shakingRef.current = false;
+      setShaking(false);
+    }, 500);
+  };
+
+  const cardContent = (
+    <>
       <div className="plp-card-img-wrap">
         {isExclusiva && !isUnlocked && (
           <>
@@ -320,6 +330,25 @@ function PlpCard({
           )}
         </div>
       </div>
+    </>
+  );
+
+  if (isExclusiva && !isUnlocked) {
+    return (
+      <button
+        type="button"
+        className={`plp-card plp-card--locked${shaking ? ' plp-card--shaking' : ''}`}
+        onClick={handleLockedClick}
+        aria-label={`${product.title} — bloqueada, desbloqueie com seu PR`}
+      >
+        {cardContent}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={variantUrl} className="plp-card" prefetch="intent">
+      {cardContent}
     </Link>
   );
 }
@@ -337,6 +366,80 @@ const LOJA_EXCLUSIVES = [
   },
 ];
 
+function LojaExclCard({
+  item,
+  isUnlocked,
+}: {
+  item: (typeof LOJA_EXCLUSIVES)[number];
+  isUnlocked: boolean;
+}) {
+  const [shaking, setShaking] = useState(false);
+  const shakingRef = useRef(false);
+
+  const handleLockedClick = () => {
+    if (shakingRef.current) return;
+    shakingRef.current = true;
+    setShaking(true);
+    setTimeout(() => {
+      shakingRef.current = false;
+      setShaking(false);
+    }, 500);
+  };
+
+  const inner = (
+    <>
+      <div className="loja-excl-img-wrap">
+        <img src={item.img} alt={item.title} className="loja-excl-img" />
+        {isUnlocked ? (
+          <div className="plp-card-unlocked-overlay" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="plp-card-lock-label">Desbloqueada</span>
+          </div>
+        ) : (
+          <div className="plp-card-lock-overlay" aria-hidden="true">
+            <LockIcon />
+            <span className="plp-card-lock-label">Bloqueada</span>
+          </div>
+        )}
+      </div>
+      <div className="loja-excl-info">
+        <span className="loja-excl-badge">
+          <CrownIcon /> Exclusiva
+        </span>
+        <p className="loja-excl-name">{item.title}</p>
+        <p className="loja-excl-hint">
+          {isUnlocked ? 'Comprar agora →' : 'Desbloqueie com seu PR'}
+        </p>
+      </div>
+    </>
+  );
+
+  if (isUnlocked) {
+    return (
+      <Link
+        to={`/products/${EXCLUSIVE_PRODUCT_HANDLES[item.key as keyof typeof EXCLUSIVE_PRODUCT_HANDLES]}`}
+        className="loja-excl-card loja-excl-card--unlocked"
+        prefetch="intent"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`loja-excl-card loja-excl-card--locked${shaking ? ' plp-card--shaking' : ''}`}
+      onClick={handleLockedClick}
+      aria-label={`${item.title} — bloqueada, desbloqueie com seu PR`}
+    >
+      {inner}
+    </button>
+  );
+}
+
 function LojaExclusiveSection() {
   const {unlocked} = useMockUser();
 
@@ -351,51 +454,13 @@ function LojaExclusiveSection() {
         </p>
       </div>
       <div className="loja-excl-grid">
-        {LOJA_EXCLUSIVES.map((item) => {
-          const isUnlocked = unlocked[item.key as keyof typeof unlocked];
-          const to = isUnlocked
-            ? `/products/${EXCLUSIVE_PRODUCT_HANDLES[item.key as keyof typeof EXCLUSIVE_PRODUCT_HANDLES]}`
-            : '/collections/exclusivas';
-
-          return (
-            <Link
-              key={item.key}
-              to={to}
-              className={`loja-excl-card${isUnlocked ? ' loja-excl-card--unlocked' : ''}`}
-              prefetch="intent"
-            >
-              <div className="loja-excl-img-wrap">
-                <img
-                  src={item.img}
-                  alt={item.title}
-                  className="loja-excl-img"
-                />
-                {isUnlocked ? (
-                  <div className="plp-card-unlocked-overlay" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="plp-card-lock-label">Desbloqueada</span>
-                  </div>
-                ) : (
-                  <div className="plp-card-lock-overlay" aria-hidden="true">
-                    <LockIcon />
-                    <span className="plp-card-lock-label">Bloqueada</span>
-                  </div>
-                )}
-              </div>
-              <div className="loja-excl-info">
-                <span className="loja-excl-badge">
-                  <CrownIcon /> Exclusiva
-                </span>
-                <p className="loja-excl-name">{item.title}</p>
-                <p className="loja-excl-hint">
-                  {isUnlocked ? 'Comprar agora →' : 'Desbloqueie com seu PR'}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+        {LOJA_EXCLUSIVES.map((item) => (
+          <LojaExclCard
+            key={item.key}
+            item={item}
+            isUnlocked={unlocked[item.key as keyof typeof unlocked]}
+          />
+        ))}
       </div>
       <div className="plp-load-wrap">
         <Link to="/collections/exclusivas" className="plp-load-btn plp-load-btn--dark">

@@ -11,3 +11,9 @@ node_modules
 .react-router
 .DS_Store
 tsconfig.tsbuildinfo
+.claude
+graphify-out
+CLAUDE.md
+PRODUCT.md
+.cursor
+
