@@ -15,7 +15,7 @@ import {ProductForm} from '~/components/ProductForm';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {
   parseExclusiveTag,
-  getUnlockedExclusives,
+  fetchUnlockedExclusives,
   type ExclusiveRequirement,
 } from '~/lib/exclusives';
 import type {ProductFragment} from 'storefrontapi.generated';
@@ -35,7 +35,7 @@ export async function loader(args: Route.LoaderArgs) {
 
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const {handle} = params;
-  const {storefront, session} = context;
+  const {storefront} = context;
 
   if (!handle) throw new Error('Expected product handle to be defined');
 
@@ -59,8 +59,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   const tags = product.tags ?? [];
   const exclusiveReq = parseExclusiveTag(tags);
-  const unlockedKeys = getUnlockedExclusives(session);
-  const isUnlocked = exclusiveReq ? unlockedKeys.includes(exclusiveReq.key) : true;
+  const unlocked = await fetchUnlockedExclusives(
+    context.customerAccount,
+    context.supabase,
+  );
+  const isUnlocked = exclusiveReq ? unlocked[exclusiveReq.key] : true;
 
   return {product, colorVariants, exclusiveReq, isUnlocked};
 }

@@ -13,9 +13,12 @@ declare global {
     PUBLIC_STOREFRONT_API_TOKEN: string;
     PUBLIC_STOREFRONT_ID: string;
     PUBLIC_CHECKOUT_DOMAIN: string;
+    PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID: string;
+    PUBLIC_CUSTOMER_ACCOUNT_API_URL: string;
     PUBLIC_SUPABASE_URL: string;
     PUBLIC_SUPABASE_ANON_KEY: string;
     SUPABASE_SERVICE_ROLE_KEY: string;
+    PRIVATE_ADMIN_API_TOKEN?: string;
     ASSETS?: Fetcher;
   }
 }

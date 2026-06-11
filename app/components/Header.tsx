@@ -1,5 +1,5 @@
 import {Suspense, useState, useEffect, useRef, useCallback} from 'react';
-import {Await, NavLink, useAsyncValue} from 'react-router';
+import {Await, NavLink, useAsyncValue, Form} from 'react-router';
 import {
   type CartViewPayload,
   useAnalytics,
@@ -8,11 +8,14 @@ import {
 import type {HeaderQuery, CartApiQueryFragment} from 'storefrontapi.generated';
 import {useAside} from '~/components/Aside';
 import {BtSymbol} from '~/components/BtSymbol';
+import {Avatar} from '~/components/Avatar';
 
 interface HeaderProps {
   header: HeaderQuery;
   cart: Promise<CartApiQueryFragment | null>;
   isLoggedIn: Promise<boolean>;
+  customerName: Promise<string | null>;
+  customerAvatar: Promise<string | null>;
   publicStoreDomain: string;
 }
 
@@ -21,6 +24,8 @@ type Viewport = 'desktop' | 'mobile';
 export function Header({
   header,
   isLoggedIn,
+  customerName,
+  customerAvatar,
   cart,
   publicStoreDomain,
 }: HeaderProps) {
@@ -80,6 +85,8 @@ export function Header({
           />
           <HeaderCtas
             isLoggedIn={isLoggedIn}
+            customerName={customerName}
+            customerAvatar={customerAvatar}
             cart={cart}
             mobileOpen={mobileOpen}
             isClosing={isClosing}
@@ -268,7 +275,15 @@ function MobileNavPanel({
   );
 }
 
-function AccountDropdown({isLoggedIn}: {isLoggedIn: Promise<boolean>}) {
+function AccountDropdown({
+  isLoggedIn,
+  customerName,
+  customerAvatar,
+}: {
+  isLoggedIn: Promise<boolean>;
+  customerName: Promise<string | null>;
+  customerAvatar: Promise<string | null>;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -291,18 +306,10 @@ function AccountDropdown({isLoggedIn}: {isLoggedIn: Promise<boolean>}) {
         onClick={() => setOpen((v) => !v)}
       >
         <Suspense fallback={<AccountIcon />}>
-          <Await resolve={isLoggedIn} errorElement={<AccountIcon />}>
-            {(loggedIn) =>
+          <Await resolve={Promise.all([isLoggedIn, customerName, customerAvatar])} errorElement={<AccountIcon />}>
+            {([loggedIn, name, avatar]) =>
               loggedIn ? (
-                <NavLink
-                  prefetch="intent"
-                  to="/account"
-                  className="header-account-btn"
-                  aria-label="Minha conta"
-                  onClick={() => setOpen(false)}
-                >
-                  <AccountIcon />
-                </NavLink>
+                <Avatar name={name} src={avatar} size={26} className="header-account-avatar" />
               ) : (
                 <AccountIcon />
               )
@@ -311,46 +318,101 @@ function AccountDropdown({isLoggedIn}: {isLoggedIn: Promise<boolean>}) {
         </Suspense>
       </button>
       {open && (
-        <div className="account-popup">
-          <div className="account-popup-header">
-            <div className="account-popup-icon">
-              <AccountIcon />
-            </div>
-            <div className="account-popup-brand">
-              <span className="account-popup-brand-name">BLACKTRUNK</span>
-              <span className="account-popup-brand-sub">Minha Conta</span>
-            </div>
-          </div>
-          <hr className="account-popup-divider" />
-          <NavLink
-            prefetch="intent"
-            to="/account/login"
-            className="account-popup-btn account-popup-btn--primary"
-            onClick={() => setOpen(false)}
-          >
-            Fazer Login
-          </NavLink>
-          <NavLink
-            prefetch="intent"
-            to="/account/register"
-            className="account-popup-btn account-popup-btn--secondary"
-            onClick={() => setOpen(false)}
-          >
-            Criar Conta
-          </NavLink>
-        </div>
+        <Suspense fallback={<AccountPopupGuest onClose={() => setOpen(false)} />}>
+          <Await resolve={Promise.all([isLoggedIn, customerName, customerAvatar])} errorElement={<AccountPopupGuest onClose={() => setOpen(false)} />}>
+            {([loggedIn, name, avatar]) =>
+              loggedIn ? (
+                <AccountPopupUser name={name} avatar={avatar} onClose={() => setOpen(false)} />
+              ) : (
+                <AccountPopupGuest onClose={() => setOpen(false)} />
+              )
+            }
+          </Await>
+        </Suspense>
       )}
+    </div>
+  );
+}
+
+function AccountPopupUser({
+  name,
+  avatar,
+  onClose,
+}: {
+  name: string | null;
+  avatar: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <div className="account-popup">
+      <div className="account-popup-header">
+        <div className="account-popup-icon">
+          <Avatar name={name} src={avatar} size={36} />
+        </div>
+        <div className="account-popup-brand">
+          <span className="account-popup-brand-name">{name ? name.toUpperCase() : 'ATLETA'}</span>
+          <span className="account-popup-brand-sub">Bem-vindo de volta</span>
+        </div>
+      </div>
+      <hr className="account-popup-divider" />
+      <NavLink prefetch="intent" to="/account/profile" className="account-popup-item" onClick={onClose}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Meu Perfil
+      </NavLink>
+      <NavLink prefetch="intent" to="/account/orders" className="account-popup-item" onClick={onClose}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Meus Pedidos
+      </NavLink>
+      <NavLink prefetch="intent" to="/account/addresses" className="account-popup-item" onClick={onClose}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Endereços
+      </NavLink>
+      <hr className="account-popup-divider" />
+      <Form method="post" action="/account/logout">
+        <button type="submit" className="account-popup-item account-popup-item--danger">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </button>
+      </Form>
+    </div>
+  );
+}
+
+function AccountPopupGuest({onClose}: {onClose: () => void}) {
+  return (
+    <div className="account-popup">
+      <div className="account-popup-header">
+        <div className="account-popup-icon">
+          <AccountIcon />
+        </div>
+        <div className="account-popup-brand">
+          <span className="account-popup-brand-name">BLACKTRUNK</span>
+          <span className="account-popup-brand-sub">Minha Conta</span>
+        </div>
+      </div>
+      <hr className="account-popup-divider" />
+      <NavLink prefetch="intent" to="/account/login" className="account-popup-btn account-popup-btn--primary" onClick={onClose}>
+        Fazer Login
+      </NavLink>
+      <NavLink prefetch="intent" to="/account/register" className="account-popup-btn account-popup-btn--secondary" onClick={onClose}>
+        Criar Conta
+      </NavLink>
     </div>
   );
 }
 
 function HeaderCtas({
   isLoggedIn,
+  customerName,
+  customerAvatar,
   cart,
   mobileOpen,
   isClosing,
   onMobileToggle,
-}: Pick<HeaderProps, 'isLoggedIn' | 'cart'> & {
+}: Pick<
+  HeaderProps,
+  'isLoggedIn' | 'customerName' | 'customerAvatar' | 'cart'
+> & {
   mobileOpen: boolean;
   isClosing: boolean;
   onMobileToggle: () => void;
@@ -358,7 +420,11 @@ function HeaderCtas({
   return (
     <nav className="header-ctas" role="navigation">
       <CartToggle cart={cart} />
-      <AccountDropdown isLoggedIn={isLoggedIn} />
+      <AccountDropdown
+        isLoggedIn={isLoggedIn}
+        customerName={customerName}
+        customerAvatar={customerAvatar}
+      />
       <HeaderMenuMobileToggle
         isOpen={mobileOpen && !isClosing}
         onToggle={onMobileToggle}

@@ -1,11 +1,23 @@
 import {useState} from 'react';
-import {Link, data, useFetcher} from 'react-router';
+import {Link, data, useFetcher, useLoaderData} from 'react-router';
 import type {MetaFunction} from 'react-router';
 import type {Route} from './+types/exclusivas';
-import {useMockUser} from '~/lib/mock-user';
-import {EXCLUSIVE_PRODUCT_HANDLES, type ExclusiveKey} from '~/lib/exclusives';
+import {
+  EXCLUSIVE_PRODUCT_HANDLES,
+  fetchUnlockedExclusives,
+  type ExclusiveKey,
+} from '~/lib/exclusives';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB — Supabase free tier limit
+
+export async function loader({context}: Route.LoaderArgs) {
+  return {
+    unlocked: await fetchUnlockedExclusives(
+      context.customerAccount,
+      context.supabase,
+    ),
+  };
+}
 
 export async function action({request, context}: Route.ActionArgs) {
   const form = await request.formData();
@@ -296,7 +308,7 @@ function ManifestoSection() {
 }
 
 export default function ExclusivasPage() {
-  const {unlocked} = useMockUser();
+  const {unlocked} = useLoaderData<typeof loader>();
 
   return (
     <div className="excl-page">

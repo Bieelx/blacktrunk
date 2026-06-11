@@ -33,6 +33,8 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['.tryhydrogen.dev'],
+    // '.trycloudflare.com' = wildcard: aceita qualquer túnel cloudflared,
+    // então não precisa atualizar o host a cada run (npm run dev:tunnel).
+    allowedHosts: ['.tryhydrogen.dev', '.trycloudflare.com'],
   },
 });

@@ -17,6 +17,11 @@ import {
   ORDER_FILTER_FIELDS,
   type OrderFilterParams,
 } from '~/lib/orderFilters';
+import {
+  financialStatusPtBr,
+  fulfillmentStatusPtBr,
+  formatOrderDate,
+} from '~/lib/orderStatus';
 import {CUSTOMER_ORDERS_QUERY} from '~/graphql/customer-account/CustomerOrdersQuery';
 import type {
   CustomerOrdersFragment,
@@ -30,7 +35,7 @@ type OrdersLoaderData = {
 };
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: 'Orders'}];
+  return [{title: 'Meus Pedidos'}];
 };
 
 export async function loader({request, context}: Route.LoaderArgs) {
@@ -63,7 +68,8 @@ export default function Orders() {
   const {orders} = customer;
 
   return (
-    <div className="orders">
+    <div className="acct-orders">
+      <h2 className="acct-section-title">Meus pedidos</h2>
       <OrderSearchForm currentFilters={filters} />
       <OrdersTable orders={orders} filters={filters} />
     </div>
@@ -80,7 +86,7 @@ function OrdersTable({
   const hasFilters = !!(filters.name || filters.confirmationNumber);
 
   return (
-    <div className="acccount-orders" aria-live="polite">
+    <div className="acct-orders-list" aria-live="polite">
       {orders?.nodes.length ? (
         <PaginatedResourceSection connection={orders}>
           {({node: order}) => <OrderItem key={order.id} order={order} />}
@@ -94,22 +100,20 @@ function OrdersTable({
 
 function EmptyOrders({hasFilters = false}: {hasFilters?: boolean}) {
   return (
-    <div>
+    <div className="acct-empty">
       {hasFilters ? (
         <>
-          <p>No orders found matching your search.</p>
-          <br />
-          <p>
-            <Link to="/account/orders">Clear filters →</Link>
-          </p>
+          <p>Nenhum pedido encontrado para a sua busca.</p>
+          <Link className="acct-link" to="/account/orders">
+            Limpar filtros →
+          </Link>
         </>
       ) : (
         <>
-          <p>You haven&apos;t placed any orders yet.</p>
-          <br />
-          <p>
-            <Link to="/collections">Start Shopping →</Link>
-          </p>
+          <p>Você ainda não fez nenhum pedido.</p>
+          <Link className="acct-link" to="/collections">
+            Começar a comprar →
+          </Link>
         </>
       )}
     </div>
@@ -152,71 +156,85 @@ function OrderSearchForm({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      className="order-search-form"
-      aria-label="Search orders"
+      className="acct-order-search"
+      aria-label="Buscar pedidos"
     >
-      <fieldset className="order-search-fieldset">
-        <legend className="order-search-legend">Filter Orders</legend>
-
-        <div className="order-search-inputs">
-          <input
-            type="search"
-            name={ORDER_FILTER_FIELDS.NAME}
-            placeholder="Order #"
-            aria-label="Order number"
-            defaultValue={currentFilters.name || ''}
-            className="order-search-input"
-          />
-          <input
-            type="search"
-            name={ORDER_FILTER_FIELDS.CONFIRMATION_NUMBER}
-            placeholder="Confirmation #"
-            aria-label="Confirmation number"
-            defaultValue={currentFilters.confirmationNumber || ''}
-            className="order-search-input"
-          />
-        </div>
-
-        <div className="order-search-buttons">
-          <button type="submit" disabled={isSearching}>
-            {isSearching ? 'Searching' : 'Search'}
+      <input
+        type="search"
+        name={ORDER_FILTER_FIELDS.NAME}
+        placeholder="Nº do pedido"
+        aria-label="Número do pedido"
+        defaultValue={currentFilters.name || ''}
+        className="acct-input"
+      />
+      <input
+        type="search"
+        name={ORDER_FILTER_FIELDS.CONFIRMATION_NUMBER}
+        placeholder="Nº de confirmação"
+        aria-label="Número de confirmação"
+        defaultValue={currentFilters.confirmationNumber || ''}
+        className="acct-input"
+      />
+      <div className="acct-order-search-buttons">
+        <button className="acct-btn" type="submit" disabled={isSearching}>
+          {isSearching ? 'Buscando…' : 'Buscar'}
+        </button>
+        {hasFilters && (
+          <button
+            className="acct-btn acct-btn--ghost"
+            type="button"
+            disabled={isSearching}
+            onClick={() => {
+              setSearchParams(new URLSearchParams());
+              formRef.current?.reset();
+            }}
+          >
+            Limpar
           </button>
-          {hasFilters && (
-            <button
-              type="button"
-              disabled={isSearching}
-              onClick={() => {
-                setSearchParams(new URLSearchParams());
-                formRef.current?.reset();
-              }}
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </fieldset>
+        )}
+      </div>
     </form>
   );
 }
 
 function OrderItem({order}: {order: OrderItemFragment}) {
-  const fulfillmentStatus = flattenConnection(order.fulfillments)[0]?.status;
+  const fulfillmentStatus = fulfillmentStatusPtBr(
+    flattenConnection(order.fulfillments)[0]?.status,
+  );
+  const financialStatus = financialStatusPtBr(order.financialStatus);
+
   return (
-    <>
-      <fieldset>
-        <Link to={`/account/orders/${btoa(order.id)}`}>
-          <strong>#{order.number}</strong>
-        </Link>
-        <p>{new Date(order.processedAt).toDateString()}</p>
+    <Link
+      className="acct-order-card"
+      to={`/account/orders/${btoa(order.id)}`}
+    >
+      <div className="acct-order-card-main">
+        <strong className="acct-order-number">Pedido #{order.number}</strong>
+        <span className="acct-order-date">
+          {formatOrderDate(order.processedAt)}
+        </span>
         {order.confirmationNumber && (
-          <p>Confirmation: {order.confirmationNumber}</p>
+          <span className="acct-order-confirmation">
+            Confirmação: {order.confirmationNumber}
+          </span>
         )}
-        <p>{order.financialStatus}</p>
-        {fulfillmentStatus && <p>{fulfillmentStatus}</p>}
-        <Money data={order.totalPrice} />
-        <Link to={`/account/orders/${btoa(order.id)}`}>View Order →</Link>
-      </fieldset>
-      <br />
-    </>
+      </div>
+      <div className="acct-order-card-side">
+        <div className="acct-order-statuses">
+          {financialStatus && (
+            <span className="acct-status">{financialStatus}</span>
+          )}
+          {fulfillmentStatus && (
+            <span className="acct-status acct-status--shipping">
+              {fulfillmentStatus}
+            </span>
+          )}
+        </div>
+        <span className="acct-order-total">
+          <Money data={order.totalPrice} />
+        </span>
+        <span className="acct-order-view">Ver pedido →</span>
+      </div>
+    </Link>
   );
 }

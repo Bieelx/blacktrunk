@@ -2,6 +2,7 @@ import {redirect, data} from 'react-router';
 import {Form, Link, useNavigation, useActionData} from 'react-router';
 import type {Route} from './+types/account_.register';
 import {BtSymbol} from '~/components/BtSymbol';
+import {customerEmailExists} from '~/lib/admin';
 
 export async function loader({context}: Route.LoaderArgs) {
   const isLoggedIn = await context.customerAccount.isLoggedIn();
@@ -11,12 +12,25 @@ export async function loader({context}: Route.LoaderArgs) {
 
 export async function action({request, context}: Route.ActionArgs) {
   const form = await request.formData();
-  const email = String(form.get('email') ?? '').trim();
+  const email = String(form.get('email') ?? '').trim().toLowerCase();
+  const name = String(form.get('name') ?? '').trim();
   const username = String(form.get('username') ?? '').trim().toLowerCase();
 
   // Validate username format
   if (!username) {
     return data({error: 'Nome de usuário obrigatório.'}, {status: 400});
+  }
+  if (!email) {
+    return data({error: 'E-mail obrigatório.'}, {status: 400});
+  }
+
+  // Reject emails that already belong to a Shopify customer
+  const emailExists = await customerEmailExists(context.env, email);
+  if (emailExists === true) {
+    return data(
+      {error: 'Já existe uma conta com esse e-mail. Faça login.'},
+      {status: 400},
+    );
   }
   if (!/^[a-z0-9_]{3,20}$/.test(username)) {
     return data(
@@ -25,7 +39,9 @@ export async function action({request, context}: Route.ActionArgs) {
     );
   }
 
-  // Check uniqueness in Supabase
+  // Check uniqueness in Supabase (read-only — no row created here).
+  // The actual insert happens in account_.authorize after OAuth succeeds,
+  // so a mistyped email / abandoned flow never leaves an orphaned username.
   const {data: existing, error: queryError} = await context.supabase
     .from('users')
     .select('id')
@@ -39,27 +55,19 @@ export async function action({request, context}: Route.ActionArgs) {
     return data({error: 'Nome de usuário já em uso. Escolha outro.'}, {status: 400});
   }
 
-  // Create Supabase user record (shopify_id linked after OAuth)
-  const {error: insertError} = await context.supabase
-    .from('users')
-    .insert({username, shopify_id: null});
-
-  if (insertError) {
-    return data({error: 'Erro ao criar conta. Tente novamente.'}, {status: 500});
-  }
-
-  // Store username in session for post-OAuth linking
+  // Store username/name in session for post-OAuth linking
   context.session.set('pendingUsername', username);
+  if (name) context.session.set('pendingName', name);
+  const sessionCookie = await context.session.commit();
 
-  // TODO: link Shopify OAuth after store credentials configured
-  // return context.customerAccount.login({
-  //   countryCode: context.storefront.i18n.country,
-  //   ...(email ? {loginHint: email} : {}),
-  // });
-
-  return data({success: true, username}, {
-    headers: {'Set-Cookie': await context.session.commit()},
+  const loginResponse = await context.customerAccount.login({
+    countryCode: context.storefront.i18n.country,
+    loginHint: email,
   });
+
+  // Append session cookie to the OAuth redirect response
+  loginResponse.headers.append('Set-Cookie', sessionCookie);
+  return loginResponse;
 }
 
 const BoltIcon = ({size = 20}: {size?: number}) => (
@@ -161,42 +169,15 @@ export default function Register() {
                 type="email"
                 placeholder="seu@email.com"
                 autoComplete="email"
+                required
               />
+              <span className="reg-field-rules">
+                Sem senha: enviaremos um código de acesso para este e-mail.
+              </span>
             </div>
 
-            <div className="reg-row">
-              <div className="reg-field">
-                <label htmlFor="reg-pw">Senha</label>
-                <input
-                  id="reg-pw"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  minLength={8}
-                />
-              </div>
-              <div className="reg-field">
-                <label htmlFor="reg-pw2">Confirmar</label>
-                <input
-                  id="reg-pw2"
-                  name="password2"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  minLength={8}
-                />
-              </div>
-            </div>
-
-            {'error' in (actionData ?? {}) && (
-              <p className="reg-error">{(actionData as {error: string}).error}</p>
-            )}
-
-            {'success' in (actionData ?? {}) && (
-              <p className="reg-success">
-                @{(actionData as {username: string}).username} criado com sucesso! ✓
-              </p>
+            {actionData?.error && (
+              <p className="reg-error">{actionData.error}</p>
             )}
 
             <button type="submit" className="reg-cta" disabled={busy}>

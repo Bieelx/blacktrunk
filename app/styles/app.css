@@ -370,6 +370,10 @@ button.reset:hover:not(:has(> *)) {
   opacity: 0.7;
 }
 
+.header-account-avatar {
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+}
+
 @keyframes acct-popup-in {
   from {
     opacity: 0;
@@ -504,6 +508,37 @@ button.reset:hover:not(:has(> *)) {
 .account-popup-btn--secondary:hover {
   border-color: rgba(255, 255, 255, 0.35);
   color: #fff;
+}
+
+.account-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.account-popup-item:hover {
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+}
+.account-popup-item--danger {
+  color: rgba(224, 90, 58, 0.8);
+}
+.account-popup-item--danger:hover {
+  background: rgba(224, 90, 58, 0.1);
+  color: #e05a3a;
 }
 
 .header-cart-btn {
@@ -9631,5 +9666,617 @@ aside[data-aside="filter"] > main {
 
   .faq-content {
     padding: 2rem 1.25rem;
+  }
+}
+
+/*
+* --------------------------------------------------
+* Conta do cliente (/account) — acct-*
+* --------------------------------------------------
+*/
+.acct-page {
+  background: #000;
+  min-height: 100vh;
+  padding: 56px 24px 96px;
+}
+
+.acct-container {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.acct-header {
+  margin-bottom: 32px;
+}
+
+.acct-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.acct-title {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 300;
+  color: #fff;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.acct-title strong {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -1px;
+}
+
+/* NAV */
+.acct-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 16px;
+  margin-bottom: 36px;
+}
+
+.acct-nav-link {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 9px 20px;
+  transition: color 150ms, border-color 150ms, background 150ms;
+}
+
+.acct-nav-link:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.acct-nav-link--active {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+}
+
+.acct-nav-link--active:hover {
+  color: #000;
+}
+
+.acct-logout {
+  margin-left: auto;
+}
+
+.acct-nav-link--danger:hover {
+  border-color: #e05a3a;
+  color: #e05a3a;
+}
+
+/* CONTEÚDO */
+.acct-section-title {
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #fff;
+  margin: 0 0 20px;
+}
+
+.acct-subheading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 10px;
+}
+
+.acct-card {
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.acct-muted {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+  margin: 0;
+}
+
+.acct-link {
+  color: #e05a3a;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.acct-link:hover {
+  text-decoration: underline;
+}
+
+.acct-back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.acct-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 40px 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.acct-error {
+  color: #e05a3a;
+  font-size: 13px;
+  margin: 0;
+}
+
+.acct-success {
+  color: #2e7d32;
+  font-size: 13px;
+  margin: 0;
+}
+
+.acct-field-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* AVATAR (compartilhado: header da conta, perfil, popup) */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.avatar--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.acct-header--row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Upload de foto no perfil */
+.acct-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 8px;
+}
+
+.acct-avatar-preview {
+  border: 2px solid rgba(255, 255, 255, 0.14);
+}
+
+.acct-avatar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+/* FORM */
+.acct-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.acct-form-legend {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 14px;
+}
+
+.acct-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.acct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acct-field label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.acct-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #fff;
+  outline: none;
+  transition: border-color 200ms, background 200ms, box-shadow 200ms;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.acct-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.acct-input:focus {
+  border-color: rgba(224, 90, 58, 0.8);
+  background: rgba(224, 90, 58, 0.04);
+  box-shadow: 0 0 0 3px rgba(224, 90, 58, 0.14);
+}
+
+.acct-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acct-checkbox label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.acct-checkbox input {
+  accent-color: #e05a3a;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.acct-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* BOTÕES */
+.acct-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 12px 24px;
+  transition: background 150ms, color 150ms, border-color 150ms,
+    transform 100ms;
+}
+
+.acct-btn:hover:not(:disabled) {
+  border-color: #fff;
+  transform: translateY(-1px);
+}
+
+.acct-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.acct-btn--primary {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+}
+
+.acct-btn--primary:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.acct-btn--ghost {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.acct-btn--danger {
+  border-color: rgba(224, 90, 58, 0.5);
+  color: #e05a3a;
+}
+
+.acct-btn--danger:hover:not(:disabled) {
+  background: rgba(224, 90, 58, 0.1);
+  border-color: #e05a3a;
+}
+
+/* PEDIDOS — busca */
+.acct-order-search {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.acct-order-search-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* PEDIDOS — lista */
+.acct-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.acct-order-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 20px 24px;
+  text-decoration: none;
+  transition: border-color 150ms, transform 100ms;
+  margin-bottom: 14px;
+}
+
+.acct-order-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.acct-order-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.acct-order-number {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.acct-order-date,
+.acct-order-confirmation {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+}
+
+.acct-order-card-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.acct-order-statuses {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.acct-status {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  width: fit-content;
+}
+
+.acct-status--shipping {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #7ba6f5;
+}
+
+.acct-order-total {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.acct-order-view {
+  color: #e05a3a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* PEDIDO — detalhe */
+.acct-order-head {
+  margin-bottom: 24px;
+}
+
+.acct-order-table-wrap {
+  overflow-x: auto;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.acct-order-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+  font-size: 14px;
+}
+
+.acct-order-table th {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.acct-order-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.acct-order-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.acct-line-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.acct-line-item-img img {
+  border-radius: 6px;
+  display: block;
+}
+
+.acct-line-item-title {
+  margin: 0 0 2px;
+  font-weight: 600;
+}
+
+.acct-order-summary {
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 18px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px;
+  margin-left: auto;
+}
+
+.acct-order-summary-row {
+  display: flex;
+  justify-content: space-between;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+.acct-order-summary-row--total {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 10px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.acct-order-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.acct-order-meta-block {
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 20px 24px;
+}
+
+.acct-address-text p {
+  margin: 0 0 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-style: normal;
+}
+
+/* ENDEREÇOS */
+.acct-addresses-existing .acct-card > .acct-status {
+  margin-bottom: 14px;
+}
+
+/* RESPONSIVO */
+@media (max-width: 720px) {
+  .acct-page {
+    padding: 32px 16px 64px;
+  }
+
+  .acct-nav {
+    gap: 6px;
+  }
+
+  .acct-logout {
+    margin-left: 0;
+  }
+
+  .acct-order-search {
+    grid-template-columns: 1fr;
+  }
+
+  .acct-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .acct-order-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .acct-order-card-side {
+    align-items: flex-start;
+  }
+
+  .acct-order-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .acct-order-summary {
+    max-width: none;
+    margin-left: 0;
   }
 }

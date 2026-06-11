@@ -3,7 +3,7 @@ import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm} from '@shopify/hydrogen';
 import {CartMain} from '~/components/CartMain';
-import {parseExclusiveTag, getUnlockedExclusives} from '~/lib/exclusives';
+import {parseExclusiveTag, fetchUnlockedExclusives} from '~/lib/exclusives';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: `Hydrogen | Cart`}];
@@ -27,7 +27,7 @@ export async function action({request, context}: Route.ActionArgs) {
 
   switch (action) {
     case CartForm.ACTIONS.LinesAdd: {
-      const {storefront, session} = context;
+      const {storefront} = context;
       const merchandiseIds = (inputs.lines as {merchandiseId: string}[]).map(
         (l) => l.merchandiseId,
       );
@@ -36,13 +36,16 @@ export async function action({request, context}: Route.ActionArgs) {
         nodes: Array<{product?: {tags: string[]}} | null>;
       }>(VARIANT_PRODUCT_QUERY, {variables: {ids: merchandiseIds}});
 
-      const unlockedKeys = getUnlockedExclusives(session);
+      const unlocked = await fetchUnlockedExclusives(
+        context.customerAccount,
+        context.supabase,
+      );
 
       for (const node of nodes) {
         const tags = node?.product?.tags;
         if (!tags) continue;
         const req = parseExclusiveTag(tags);
-        if (req && !unlockedKeys.includes(req.key)) {
+        if (req && !unlocked[req.key]) {
           return data(
             {
               cart: null,

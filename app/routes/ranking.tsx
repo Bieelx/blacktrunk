@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {Link, useLoaderData} from 'react-router';
 import type {CSSProperties} from 'react';
 import {CrownIcon, BenchIcon, SquatIcon} from '~/components/Icons';
+import {buildRanking, type RankingEntry} from '~/lib/ranking';
 import type {Route} from './+types/ranking';
 
 export const meta: Route.MetaFunction = () => {
@@ -16,40 +17,15 @@ type Entry = {
 };
 
 export async function loader({context}: Route.LoaderArgs) {
-  const [recordsRes, usersRes] = await Promise.all([
-    context.supabase
-      .from('personal_records')
-      .select('user_id, exercise, weight_kg')
-      .order('weight_kg', {ascending: false}),
-    context.supabase.from('users').select('id, username'),
-  ]);
+  const ranking = await buildRanking(context.supabase);
 
-  const records = recordsRes.data ?? [];
-  const usersById = Object.fromEntries(
-    (usersRes.data ?? []).map((u) => [u.id as string, u.username as string]),
-  );
-
-  function buildRanking(exercise: string): Entry[] {
-    const best: Record<string, number> = {};
-    for (const r of records) {
-      if (r.exercise !== exercise) continue;
-      if (!best[r.user_id] || r.weight_kg > best[r.user_id]) {
-        best[r.user_id] = r.weight_kg;
-      }
-    }
-    return Object.entries(best)
-      .sort(([, a], [, b]) => b - a)
-      .map(([userId, weight], i) => ({
-        position: i + 1,
-        name: usersById[userId] ?? userId.slice(0, 8),
-        weight,
-        handle: usersById[userId] ?? userId,
-      }));
+  function withPositions(entries: RankingEntry[]): Entry[] {
+    return entries.map((entry, i) => ({...entry, position: i + 1}));
   }
 
   return {
-    supino: buildRanking('supino'),
-    agachamento: buildRanking('agachamento'),
+    supino: withPositions(ranking.supino),
+    agachamento: withPositions(ranking.agachamento),
   };
 }
 

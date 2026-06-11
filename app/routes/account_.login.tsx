@@ -1,7 +1,8 @@
-import {redirect} from 'react-router';
-import {Form, Link, useNavigation} from 'react-router';
+import {redirect, data} from 'react-router';
+import {Form, Link, useNavigation, useActionData} from 'react-router';
 import type {Route} from './+types/account_.login';
 import {BtSymbol} from '~/components/BtSymbol';
+import {customerEmailExists} from '~/lib/admin';
 
 export async function loader({context}: Route.LoaderArgs) {
   const isLoggedIn = await context.customerAccount.isLoggedIn();
@@ -11,10 +12,23 @@ export async function loader({context}: Route.LoaderArgs) {
 
 export async function action({request, context}: Route.ActionArgs) {
   const form = await request.formData();
-  const email = String(form.get('email') ?? '');
+  const email = String(form.get('email') ?? '').trim().toLowerCase();
+
+  if (!email) {
+    return data({error: 'E-mail obrigatório.'}, {status: 400});
+  }
+
+  const emailExists = await customerEmailExists(context.env, email);
+  if (emailExists === false) {
+    return data(
+      {error: 'Nenhuma conta encontrada com esse e-mail. Crie uma conta.'},
+      {status: 400},
+    );
+  }
+
   return context.customerAccount.login({
     countryCode: context.storefront.i18n.country,
-    ...(email ? {loginHint: email} : {}),
+    loginHint: email,
   });
 }
 
@@ -44,6 +58,7 @@ const ArrowIcon = () => (
 
 export default function Login() {
   const nav = useNavigation();
+  const actionData = useActionData<typeof action>();
   const busy = nav.state !== 'idle';
 
   return (
@@ -90,29 +105,14 @@ export default function Login() {
                 autoComplete="email"
                 required
               />
+              <span className="reg-field-rules">
+                Sem senha: enviaremos um código de acesso para este e-mail.
+              </span>
             </div>
 
-            <div className="reg-field">
-              <label htmlFor="login-pw">Senha</label>
-              <input
-                id="login-pw"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-              />
-            </div>
-
-            <div className="reg-options">
-              <label className="reg-checkbox">
-                <input type="checkbox" name="remember" />
-                <span>Lembrar-me</span>
-              </label>
-              <Link to="/account/recover" className="reg-forgot">
-                Esqueceu a senha?
-              </Link>
-            </div>
+            {actionData?.error && (
+              <p className="reg-error">{actionData.error}</p>
+            )}
 
             <button type="submit" className="reg-cta" disabled={busy}>
               {busy ? 'AGUARDE...' : 'ENTRAR'}

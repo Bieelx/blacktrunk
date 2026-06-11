@@ -1,4 +1,4 @@
-import {redirect, useLoaderData} from 'react-router';
+import {redirect, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/account.orders.$id';
 import {Money, Image} from '@shopify/hydrogen';
 import type {
@@ -6,9 +6,10 @@ import type {
   OrderQuery,
 } from 'customer-accountapi.generated';
 import {CUSTOMER_ORDER_QUERY} from '~/graphql/customer-account/CustomerOrderQuery';
+import {fulfillmentStatusPtBr, formatOrderDate} from '~/lib/orderStatus';
 
 export const meta: Route.MetaFunction = ({data}) => {
-  return [{title: `Order ${data?.order?.name}`}];
+  return [{title: `Pedido ${data?.order?.name}`}];
 };
 
 export async function loader({params, context}: Route.LoaderArgs) {
@@ -81,22 +82,34 @@ export default function OrderRoute() {
     discountPercentage,
     fulfillmentStatus,
   } = useLoaderData<typeof loader>();
+
+  const fulfillmentLabel = fulfillmentStatusPtBr(fulfillmentStatus);
+
   return (
-    <div className="account-order">
-      <h2>Order {order.name}</h2>
-      <p>Placed on {new Date(order.processedAt!).toDateString()}</p>
-      {order.confirmationNumber && (
-        <p>Confirmation: {order.confirmationNumber}</p>
-      )}
-      <br />
-      <div>
-        <table>
+    <div className="acct-order">
+      <Link className="acct-link acct-back-link" to="/account/orders">
+        ← Voltar para meus pedidos
+      </Link>
+      <div className="acct-order-head">
+        <h2 className="acct-section-title">Pedido {order.name}</h2>
+        <p className="acct-order-date">
+          Realizado em {formatOrderDate(order.processedAt!)}
+        </p>
+        {order.confirmationNumber && (
+          <p className="acct-order-confirmation">
+            Confirmação: {order.confirmationNumber}
+          </p>
+        )}
+      </div>
+
+      <div className="acct-order-table-wrap">
+        <table className="acct-order-table">
           <thead>
             <tr>
-              <th scope="col">Product</th>
-              <th scope="col">Price</th>
-              <th scope="col">Quantity</th>
-              <th scope="col">Total</th>
+              <th scope="col">Produto</th>
+              <th scope="col">Preço</th>
+              <th scope="col">Qtd.</th>
+              <th scope="col">Desconto</th>
             </tr>
           </thead>
           <tbody>
@@ -105,64 +118,41 @@ export default function OrderRoute() {
               <OrderLineRow key={lineItemIndex} lineItem={lineItem} />
             ))}
           </tbody>
-          <tfoot>
-            {((discountValue && discountValue.amount) ||
-              discountPercentage) && (
-              <tr>
-                <th scope="row" colSpan={3}>
-                  <p>Discounts</p>
-                </th>
-                <th scope="row">
-                  <p>Discounts</p>
-                </th>
-                <td>
-                  {discountPercentage ? (
-                    <span>-{discountPercentage}% OFF</span>
-                  ) : (
-                    discountValue && <Money data={discountValue!} />
-                  )}
-                </td>
-              </tr>
-            )}
-            <tr>
-              <th scope="row" colSpan={3}>
-                <p>Subtotal</p>
-              </th>
-              <th scope="row">
-                <p>Subtotal</p>
-              </th>
-              <td>
-                <Money data={order.subtotal!} />
-              </td>
-            </tr>
-            <tr>
-              <th scope="row" colSpan={3}>
-                Tax
-              </th>
-              <th scope="row">
-                <p>Tax</p>
-              </th>
-              <td>
-                <Money data={order.totalTax!} />
-              </td>
-            </tr>
-            <tr>
-              <th scope="row" colSpan={3}>
-                Total
-              </th>
-              <th scope="row">
-                <p>Total</p>
-              </th>
-              <td>
-                <Money data={order.totalPrice!} />
-              </td>
-            </tr>
-          </tfoot>
         </table>
-        <div>
-          <h3>Shipping Address</h3>
+      </div>
+
+      <div className="acct-order-summary">
+        {((discountValue && discountValue.amount) || discountPercentage) && (
+          <div className="acct-order-summary-row">
+            <span>Descontos</span>
+            <span>
+              {discountPercentage ? (
+                <span>-{discountPercentage}% OFF</span>
+              ) : (
+                discountValue && <Money data={discountValue!} />
+              )}
+            </span>
+          </div>
+        )}
+        <div className="acct-order-summary-row">
+          <span>Subtotal</span>
+          <Money data={order.subtotal!} />
+        </div>
+        <div className="acct-order-summary-row">
+          <span>Impostos</span>
+          <Money data={order.totalTax!} />
+        </div>
+        <div className="acct-order-summary-row acct-order-summary-row--total">
+          <span>Total</span>
+          <Money data={order.totalPrice!} />
+        </div>
+      </div>
+
+      <div className="acct-order-meta">
+        <div className="acct-order-meta-block">
+          <h3 className="acct-subheading">Endereço de entrega</h3>
           {order?.shippingAddress ? (
-            <address>
+            <address className="acct-address-text">
               <p>{order.shippingAddress.name}</p>
               {order.shippingAddress.formatted ? (
                 <p>{order.shippingAddress.formatted}</p>
@@ -176,20 +166,29 @@ export default function OrderRoute() {
               )}
             </address>
           ) : (
-            <p>No shipping address defined</p>
+            <p className="acct-muted">Nenhum endereço de entrega informado.</p>
           )}
-          <h3>Status</h3>
-          <div>
-            <p>{fulfillmentStatus}</p>
-          </div>
+        </div>
+        <div className="acct-order-meta-block">
+          <h3 className="acct-subheading">Status</h3>
+          {fulfillmentLabel ? (
+            <span className="acct-status acct-status--shipping">
+              {fulfillmentLabel}
+            </span>
+          ) : (
+            <p className="acct-muted">Aguardando processamento.</p>
+          )}
         </div>
       </div>
-      <br />
-      <p>
-        <a target="_blank" href={order.statusPageUrl} rel="noreferrer">
-          View Order Status →
-        </a>
-      </p>
+
+      <a
+        className="acct-link"
+        target="_blank"
+        href={order.statusPageUrl}
+        rel="noreferrer"
+      >
+        Acompanhar status do pedido →
+      </a>
     </div>
   );
 }
@@ -198,15 +197,15 @@ function OrderLineRow({lineItem}: {lineItem: OrderLineItemFullFragment}) {
   return (
     <tr key={lineItem.id}>
       <td>
-        <div>
+        <div className="acct-line-item">
           {lineItem?.image && (
-            <div>
+            <div className="acct-line-item-img">
               <Image data={lineItem.image} width={96} height={96} />
             </div>
           )}
           <div>
-            <p>{lineItem.title}</p>
-            <small>{lineItem.variantTitle}</small>
+            <p className="acct-line-item-title">{lineItem.title}</p>
+            <small className="acct-muted">{lineItem.variantTitle}</small>
           </div>
         </div>
       </td>

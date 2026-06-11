@@ -12,7 +12,7 @@ import {
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {useVariantUrl} from '~/lib/variants';
 import type {CollectionQuery, ProductItemFragment} from 'storefrontapi.generated';
-import {useMockUser} from '~/lib/mock-user';
+import {fetchUnlockedExclusives} from '~/lib/exclusives';
 import {CrownIcon} from '~/components/Icons';
 
 const EXCLUSIVE_PRODUCT_HANDLES = {
@@ -26,8 +26,11 @@ export const meta: Route.MetaFunction = ({data}) => {
 
 export async function loader(args: Route.LoaderArgs) {
   const deferredData = loadDeferredData(args);
-  const criticalData = await loadCriticalData(args);
-  return {...deferredData, ...criticalData};
+  const [criticalData, unlocked] = await Promise.all([
+    loadCriticalData(args),
+    fetchUnlockedExclusives(args.context.customerAccount, args.context.supabase),
+  ]);
+  return {...deferredData, ...criticalData, unlocked};
 }
 
 function getSortVariables(sort: string | null) {
@@ -259,7 +262,7 @@ function PlpCard({
       ? Math.round((1 - price / compareAt) * 100)
       : null;
 
-  const {unlocked} = useMockUser();
+  const {unlocked} = useLoaderData<typeof loader>();
   const handle = product.handle.toLowerCase();
   const title = product.title.toLowerCase();
   const isUnlocked = isExclusiva
@@ -441,7 +444,7 @@ function LojaExclCard({
 }
 
 function LojaExclusiveSection() {
-  const {unlocked} = useMockUser();
+  const {unlocked} = useLoaderData<typeof loader>();
 
   return (
     <section className="loja-excl">

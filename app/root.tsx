@@ -16,6 +16,8 @@ import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import {PageLayout} from './components/PageLayout';
+import {CUSTOMER_PROFILE_QUERY} from '~/graphql/customer-account/CustomerUsernameQuery';
+import {resolveMediaImageUrl} from '~/lib/admin';
 
 export type RootLoader = typeof loader;
 
@@ -119,7 +121,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
  * Make sure to not throw any errors here, as it will cause the page to 500.
  */
 function loadDeferredData({context}: Route.LoaderArgs) {
-  const {storefront, customerAccount, cart} = context;
+  const {storefront, customerAccount, cart, env} = context;
 
   // defer the footer query (below the fold)
   const footer = storefront
@@ -134,9 +136,27 @@ function loadDeferredData({context}: Route.LoaderArgs) {
       console.error(error);
       return null;
     });
+  // Profile used for header chrome: real name everywhere, photo in the popup.
+  // Username is ranking-only, so it's just a fallback when no real name is set.
+  const profile = customerAccount.isLoggedIn().then(async (loggedIn) => {
+    if (!loggedIn) return {name: null, avatar: null};
+    try {
+      const {data} = await customerAccount.query(CUSTOMER_PROFILE_QUERY);
+      const c = data?.customer;
+      const name =
+        c?.firstName || c?.username?.value || null;
+      const avatar = await resolveMediaImageUrl(env, c?.pfp?.value);
+      return {name, avatar};
+    } catch {
+      return {name: null, avatar: null};
+    }
+  });
+
   return {
     cart: cart.get(),
     isLoggedIn: customerAccount.isLoggedIn(),
+    customerName: profile.then((p) => p.name),
+    customerAvatar: profile.then((p) => p.avatar),
     footer,
   };
 }
@@ -210,3 +230,4 @@ export function ErrorBoundary() {
     </div>
   );
 }
+

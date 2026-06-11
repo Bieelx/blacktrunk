@@ -7,9 +7,9 @@ import Autoplay from 'embla-carousel-autoplay';
 import type {RecommendedProductsQuery} from 'storefrontapi.generated';
 import {useVariantUrl} from '~/lib/variants';
 import {MockShopNotice} from '~/components/MockShopNotice';
-import {useMockUser} from '~/lib/mock-user';
 import {FirstPlaceIcon, SecondPlaceIcon, ThirdPlaceIcon} from '~/components/Icons';
-import {EXCLUSIVE_PRODUCT_HANDLES} from '~/lib/exclusives';
+import {EXCLUSIVE_PRODUCT_HANDLES, fetchUnlockedExclusives} from '~/lib/exclusives';
+import {buildRanking, type RankingData} from '~/lib/ranking';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'BlackTrunk | Marca dos Campeões'}];
@@ -24,6 +24,10 @@ export async function loader(args: Route.LoaderArgs) {
 async function loadCriticalData({context}: Route.LoaderArgs) {
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
+    unlocked: await fetchUnlockedExclusives(
+      context.customerAccount,
+      context.supabase,
+    ),
   };
 }
 
@@ -34,11 +38,15 @@ function loadDeferredData({context}: Route.LoaderArgs) {
       console.error(error);
       return null;
     });
-  return {bestsellers};
+  const ranking = buildRanking(context.supabase).catch((error: Error) => {
+    console.error(error);
+    return null;
+  });
+  return {bestsellers, ranking};
 }
 
 export default function Homepage() {
-  const {isShopLinked, bestsellers} = useLoaderData<typeof loader>();
+  const {isShopLinked, bestsellers, ranking} = useLoaderData<typeof loader>();
   return (
     <div className="home">
       {isShopLinked ? null : <MockShopNotice />}
@@ -46,7 +54,7 @@ export default function Homepage() {
       <BestsellersSection products={bestsellers} />
       <ExclusivesSection />
       <MissionSection />
-      <RankingSection />
+      <RankingSection ranking={ranking} />
       <QualitySection />
       <SocialSection />
     </div>
@@ -214,7 +222,7 @@ const EXCLUSIVES = [
 ];
 
 function ExclusivesSection() {
-  const {unlocked} = useMockUser();
+  const {unlocked} = useLoaderData<typeof loader>();
 
   return (
     <section className="exclusives-section">
@@ -337,20 +345,13 @@ function MissionSection() {
   );
 }
 
-const RANKING_DATA = {
-  supino: [
-    {position: 1, name: 'Pedro Aguiar', weight: 200},
-    {position: 2, name: 'Felipe Soares', weight: 160},
-    {position: 3, name: 'Pompeia', weight: 120},
-  ],
-  agachamento: [
-    {position: 1, name: 'Barbosa', weight: 200},
-    {position: 2, name: 'Felipe Soares', weight: 200},
-    {position: 3, name: 'Pompeia', weight: 180},
-  ],
-};
+function topThree(entries: RankingData['supino']) {
+  return entries
+    .slice(0, 3)
+    .map((entry, i) => ({position: i + 1, name: entry.name, weight: entry.weight}));
+}
 
-function RankingSection() {
+function RankingSection({ranking}: {ranking: Promise<RankingData | null>}) {
   return (
     <section className="ranking-section">
       <div className="section-header">
@@ -361,10 +362,26 @@ function RankingSection() {
           os desafios do Supino 100kg e Agachamento 150kg.
         </p>
       </div>
-      <div className="ranking-grid">
-        <Leaderboard title="SUPINO" entries={RANKING_DATA.supino} />
-        <Leaderboard title="AGACHAMENTO" entries={RANKING_DATA.agachamento} />
-      </div>
+      <Suspense
+        fallback={
+          <div className="ranking-grid">
+            <Leaderboard title="SUPINO" entries={[]} />
+            <Leaderboard title="AGACHAMENTO" entries={[]} />
+          </div>
+        }
+      >
+        <Await resolve={ranking}>
+          {(data) => (
+            <div className="ranking-grid">
+              <Leaderboard title="SUPINO" entries={topThree(data?.supino ?? [])} />
+              <Leaderboard
+                title="AGACHAMENTO"
+                entries={topThree(data?.agachamento ?? [])}
+              />
+            </div>
+          )}
+        </Await>
+      </Suspense>
       <div className="section-cta">
         <Link to="/ranking" className="btn-loja">
           VER RANKINGS{' '}
