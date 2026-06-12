@@ -19,6 +19,9 @@ declare global {
     PUBLIC_SUPABASE_ANON_KEY: string;
     SUPABASE_SERVICE_ROLE_KEY: string;
     PRIVATE_ADMIN_API_TOKEN?: string;
+    // Comma-separated allowlist of admin emails for /adm. Server-only (no
+    // PUBLIC_ prefix) so it never ships to the client bundle.
+    ADMIN_EMAILS: string;
     ASSETS?: Fetcher;
   }
 }

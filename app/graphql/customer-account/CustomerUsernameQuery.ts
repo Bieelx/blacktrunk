@@ -16,6 +16,18 @@ export const CUSTOMER_ID_QUERY = `#graphql
   }
 ` as const;
 
+// Email comes straight from the Shopify OAuth session (signed token), so it
+// cannot be spoofed from the client. Used to gate /adm against the allowlist.
+export const CUSTOMER_EMAIL_QUERY = `#graphql
+  query CustomerEmailForAdmin {
+    customer {
+      emailAddress {
+        emailAddress
+      }
+    }
+  }
+` as const;
+
 // Reads both editable profile metafields in one round-trip. pfp stores a
 // MediaImage GID (file_reference); resolve it to a URL via the Admin API.
 export const CUSTOMER_PROFILE_QUERY = `#graphql

@@ -16,7 +16,9 @@ export const meta: Route.MetaFunction = () => {
 };
 
 export async function loader(args: Route.LoaderArgs) {
-  const deferredData = loadDeferredData(args);
+  // Awaited before streaming so a CAPI token refresh can still Set-Cookie.
+  const loggedIn = await args.context.customerAccount.isLoggedIn();
+  const deferredData = loadDeferredData(args, loggedIn);
   const criticalData = await loadCriticalData(args);
   return {...deferredData, ...criticalData};
 }
@@ -24,14 +26,10 @@ export async function loader(args: Route.LoaderArgs) {
 async function loadCriticalData({context}: Route.LoaderArgs) {
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
-    unlocked: await fetchUnlockedExclusives(
-      context.customerAccount,
-      context.supabase,
-    ),
   };
 }
 
-function loadDeferredData({context}: Route.LoaderArgs) {
+function loadDeferredData({context}: Route.LoaderArgs, loggedIn: boolean) {
   const bestsellers = context.storefront
     .query(BESTSELLERS_QUERY)
     .catch((error: Error) => {
@@ -42,7 +40,14 @@ function loadDeferredData({context}: Route.LoaderArgs) {
     console.error(error);
     return null;
   });
-  return {bestsellers, ranking};
+  // Deferred, but with login already resolved: the CAPI token refresh cannot
+  // happen here (headers already sent), so it ran awaited in the loader.
+  const unlocked = fetchUnlockedExclusives(
+    context.customerAccount,
+    context.supabase,
+    loggedIn,
+  );
+  return {bestsellers, ranking, unlocked};
 }
 
 export default function Homepage() {
@@ -78,7 +83,7 @@ const HERO_SLIDES = [
   },
   {
     key: 'exclusivas',
-    bg: '/images/home/hero-2.jpg',
+    bg: '/images/home/hero-2.webp',
     alt: 'BlackTrunk — camisetas exclusivas',
     title: <>CAMISETAS EXCLUSIVAS</>,
     subtitle: 'Prove seu recorde. Ganhe o símbolo.',
@@ -94,10 +99,17 @@ function HeroSection() {
   return (
     <div className="hero-carousel" ref={emblaRef}>
       <div className="hero-carousel-container">
-        {HERO_SLIDES.map((slide) => (
+        {HERO_SLIDES.map((slide, i) => (
           <section key={slide.key} className="hero hero-carousel-slide">
             {slide.bg && (
-              <img src={slide.bg} alt={slide.alt} className="hero-bg" />
+              <img
+                src={slide.bg}
+                alt={slide.alt}
+                className="hero-bg"
+                loading={i === 0 ? 'eager' : 'lazy'}
+                fetchPriority={i === 0 ? 'high' : 'auto'}
+                decoding={i === 0 ? 'sync' : 'async'}
+              />
             )}
             <div className="hero-overlay" />
             <div className="hero-content">
@@ -210,14 +222,14 @@ const EXCLUSIVES = [
     title: 'CAMISETA\n100KG SUPINO',
     description:
       'A camiseta desbloqueável de 100kg no supino é o símbolo de uma conquista, reservado para poucos. Representa força, determinação e o privilégio de fazer parte de um grupo seleto. Está pronto para desbloquear a sua?',
-    img: '/images/exclusivas/supino-100kg.png',
+    img: '/images/exclusivas/supino-100kg.webp',
   },
   {
     key: 'agachamento',
     title: 'CAMISETA 150KG\nAGACHAMENTO',
     description:
       'A camiseta desbloqueável de 150kg no agachamento é o símbolo de uma conquista única. Reservada para poucos, ela celebra força, disciplina e o privilégio de integrar um grupo exclusivo. Está pronto para desbloquear a sua?',
-    img: '/images/exclusivas/agachamento-150kg.png',
+    img: '/images/exclusivas/agachamento-150kg.webp',
   },
 ];
 
@@ -230,7 +242,44 @@ function ExclusivesSection() {
         <h2 className="section-title">EXCLUSIVAS</h2>
         <p className="section-tagline">Prove seu recorde. Ganhe o símbolo.</p>
       </div>
-      <div className="exclusives-grid">
+      <Suspense
+        fallback={
+          <ExclusivesGrid unlocked={{supino: false, agachamento: false}} />
+        }
+      >
+        <Await resolve={unlocked}>
+          {(data) => <ExclusivesGrid unlocked={data} />}
+        </Await>
+      </Suspense>
+      <div className="section-cta">
+        <Link to="/exclusivas" className="btn-loja">
+          VER LINHA EXCLUSIVA{' '}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{verticalAlign: 'middle', marginLeft: '0.4rem'}}
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function ExclusivesGrid({
+  unlocked,
+}: {
+  unlocked: Record<string, boolean>;
+}) {
+  return (
+    <div className="exclusives-grid">
         {EXCLUSIVES.map((item) => {
           const isUnlocked = unlocked[item.key as keyof typeof unlocked];
           const productTo = `/products/${EXCLUSIVE_PRODUCT_HANDLES[item.key as keyof typeof EXCLUSIVE_PRODUCT_HANDLES]}`;
@@ -258,6 +307,8 @@ function ExclusivesSection() {
                   src={item.img}
                   alt={item.title.replace(/\n/g, ' ')}
                   className="exclusive-card-img"
+                  loading="lazy"
+                  decoding="async"
                 />
                 {isUnlocked && (
                   <div className="exclusive-card-unlocked-tag">
@@ -271,26 +322,7 @@ function ExclusivesSection() {
             </div>
           );
         })}
-      </div>
-      <div className="section-cta">
-        <Link to="/exclusivas" className="btn-loja">
-          VER LINHA EXCLUSIVA{' '}
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{verticalAlign: 'middle', marginLeft: '0.4rem'}}
-          >
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </Link>
-      </div>
-    </section>
+    </div>
   );
 }
 
@@ -311,7 +343,16 @@ function MissionSection() {
       {threshold: 0.1},
     );
     observer.observe(video);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      // Force-release the WebMediaPlayer on unmount. Without this, rapid
+      // remounts (e.g. a revalidation storm) leak players until Chrome hits
+      // its per-tab limit and blocks new ones (crbug.com/1144736), freezing
+      // the tab. Pausing + clearing src + load() frees the underlying player.
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    };
   }, []);
 
   return (
@@ -324,7 +365,7 @@ function MissionSection() {
         loop
         playsInline
         autoPlay
-        preload="auto"
+        preload="metadata"
         aria-hidden="true"
       />
       <div className="mission-overlay" />
@@ -441,31 +482,31 @@ const QUALITY_FEATURES = [
     num: 1,
     title: 'Fibras Tecnológicas',
     desc: 'Nossas camisetas combinam algodão premium com elastano de última geração, criando um tecido projetado para máximo desempenho e durabilidade. Cada detalhe foi cuidadosamente pensado para oferecer um toque de sofisticação, conforto absoluto e liberdade de movimento.',
-    img: '/images/home/fibras_tecnologicas.png',
+    img: '/images/home/fibras_tecnologicas.webp',
   },
   {
     num: 2,
     title: 'Controle de Umidade',
     desc: 'Desenvolvemos uma tecnologia avançada que absorve e evapora o suor rapidamente, garantindo frescor e conforto em todas as situações. Feitas para acompanhar o ritmo do seu dia com elegância e eficiência.',
-    img: '/images/home/controle_umidade.png',
+    img: '/images/home/controle_umidade.webp',
   },
   {
     num: 3,
     title: 'Conforto Refinado',
     desc: 'Um tecido que se molda ao seu corpo, combinando leveza, respirabilidade e um toque macio. Cada peça é projetada para oferecer o equilíbrio perfeito entre estilo e funcionalidade, pensado exclusivamente para o seu conforto e bem-estar.',
-    img: '/images/home/conforto_refinado.png',
+    img: '/images/home/conforto_refinado.webp',
   },
   {
     num: 4,
     title: 'Design Ergonômico',
     desc: 'Modelagem que acompanha os contornos do corpo, garantindo caimento perfeito e liberdade de movimento. Cada detalhe foi pensado para unir estilo, funcionalidade e performance, com foco no máximo conforto.',
-    img: '/images/home/design_ergonomico.png',
+    img: '/images/home/design_ergonomico.webp',
   },
   {
     num: 5,
     title: 'Durabilidade Premium',
     desc: 'Tecido resistente ao desgaste, projetado para manter a forma e a qualidade mesmo após inúmeras lavagens. Uma peça criada para durar e acompanhar você em todos os momentos.',
-    img: '/images/home/durabilidade_premium.png',
+    img: '/images/home/durabilidade_premium.webp',
   },
 ];
 
@@ -491,7 +532,7 @@ function QualitySection() {
             onClick={() => setActive(i)}
             aria-label={f.title}
           >
-            <img src={f.img} alt={f.title} />
+            <img src={f.img} alt={f.title} loading="lazy" decoding="async" />
             <span className="quality-fan-num">{f.num}</span>
           </button>
         ))}
@@ -516,7 +557,13 @@ function QualitySection() {
             <p className="quality-content-desc">{feature.desc}</p>
           </div>
           <div className="quality-content-img-wrap">
-            <img src={feature.img} alt={feature.title} className="quality-content-img" />
+            <img
+              src={feature.img}
+              alt={feature.title}
+              className="quality-content-img"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         </div>
       </div>

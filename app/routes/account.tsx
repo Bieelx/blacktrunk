@@ -1,9 +1,12 @@
+import {Suspense} from 'react';
 import {
+  Await,
   data as remixData,
   Form,
   NavLink,
   Outlet,
   useLoaderData,
+  type ShouldRevalidateFunction,
 } from 'react-router';
 import type {Route} from './+types/account';
 import {Avatar} from '~/components/Avatar';
@@ -12,9 +15,18 @@ import {CUSTOMER_PROFILE_QUERY} from '~/graphql/customer-account/CustomerUsernam
 import {syncCustomerPrsToShopify} from '~/lib/exclusives';
 import {resolveMediaImageUrl} from '~/lib/admin';
 
-export function shouldRevalidate() {
-  return true;
-}
+// Only revalidate after mutations (profile save, logout, etc.) or explicit
+// useRevalidator calls. Tab switches between /account/* are plain GET
+// navigations and must not rerun this loader (2 CAPI queries + Admin API).
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+  formMethod,
+  currentUrl,
+  nextUrl,
+}) => {
+  if (formMethod && formMethod !== 'GET') return true;
+  if (currentUrl.toString() === nextUrl.toString()) return true;
+  return false;
+};
 
 export async function loader({context}: Route.LoaderArgs) {
   const {customerAccount} = context;
@@ -30,17 +42,23 @@ export async function loader({context}: Route.LoaderArgs) {
   }
 
   const username = profile?.customer?.username?.value ?? null;
-  const avatarUrl = await resolveMediaImageUrl(
+  // Streamed (not awaited): the Admin API round-trip must not block the
+  // layout render. Components resolve it via <Await>.
+  const avatarUrl = resolveMediaImageUrl(
     context.env,
     profile?.customer?.pfp?.value,
-  );
+  ).catch(() => null);
 
   // Sync approved PRs (Supabase) → Shopify metafields that gate exclusives.
-  await syncCustomerPrsToShopify(
+  // Runs in the background (waitUntil) so the heavy Supabase reads + Shopify
+  // metafield mutation never block the loader response — that blocking was the
+  // cause of the navigation lag between account tabs.
+  const sync = syncCustomerPrsToShopify(
     context.supabase,
     customerAccount,
     data.customer.id,
   );
+  if (context.waitUntil) context.waitUntil(sync);
 
   return remixData(
     {customer: data.customer, username, avatarUrl},
@@ -59,21 +77,30 @@ export default function AccountLayout() {
   return (
     <div className="acct-page">
       <div className="acct-container">
-        <header className="acct-header acct-header--row">
-          <Avatar name={displayName} src={avatarUrl} size={64} />
-          <div>
-            <span className="acct-badge">Minha conta</span>
-            <h1 className="acct-title">
-              {displayName ? (
-                <>
-                  Olá, <strong>{displayName}</strong>
-                </>
-              ) : (
-                <>
-                  Bem-vindo à <strong>sua conta</strong>
-                </>
+        <header className="acct-id">
+          <div className="acct-id-glow" aria-hidden />
+          <Suspense
+            fallback={
+              <Avatar name={displayName} size={72} className="acct-id-avatar" />
+            }
+          >
+            <Await resolve={avatarUrl}>
+              {(resolved) => (
+                <Avatar
+                  name={displayName}
+                  src={resolved}
+                  size={72}
+                  className="acct-id-avatar"
+                />
               )}
+            </Await>
+          </Suspense>
+          <div className="acct-id-body">
+            <span className="acct-badge">Minha conta</span>
+            <h1 className="acct-id-name">
+              {displayName ? <strong>{displayName}</strong> : <strong>Atleta</strong>}
             </h1>
+            {username && <span className="acct-id-handle">@{username}</span>}
           </div>
         </header>
         <AccountMenu />

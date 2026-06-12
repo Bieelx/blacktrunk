@@ -76,7 +76,7 @@ export default function Login() {
         </div>
 
         <Link to="/" className="reg-logo-link">
-          <span className="reg-logo-text">BLACK TRUNK</span>
+          <span className="reg-logo-text">BLACKTRUNK</span>
           <span className="reg-logo-icon">
             <BtSymbol size={20} />
           </span>
@@ -160,7 +160,7 @@ export default function Login() {
       {/* ── RIGHT PANEL ── */}
       <div className="reg-right">
         <img
-          src="/images/home/hero-2.jpg"
+          src="/images/home/hero-2.webp"
           alt=""
           className="reg-hero-img"
           aria-hidden

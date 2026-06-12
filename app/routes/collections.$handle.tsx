@@ -208,7 +208,7 @@ function CollectionHero({
         </video>
       )}
       <img
-        src="/images/loja/img_card.png"
+        src="/images/loja/img_card.webp"
         alt=""
         className="plp-hero-card-img"
         aria-hidden="true"
@@ -360,12 +360,12 @@ const LOJA_EXCLUSIVES = [
   {
     key: 'supino',
     title: 'Supino 100kg Edition',
-    img: '/images/exclusivas/supino-100kg.png',
+    img: '/images/exclusivas/supino-100kg.webp',
   },
   {
     key: 'agachamento',
     title: 'Agachamento 150kg Edition',
-    img: '/images/exclusivas/agachamento-150kg.png',
+    img: '/images/exclusivas/agachamento-150kg.webp',
   },
 ];
 

@@ -39,10 +39,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   if (!handle) throw new Error('Expected product handle to be defined');
 
-  const [{product}] = await Promise.all([
+  const [{product}, unlocked] = await Promise.all([
     storefront.query(PRODUCT_QUERY, {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
     }),
+    fetchUnlockedExclusives(context.customerAccount, context.supabase),
   ]);
 
   if (!product?.id) throw new Response(null, {status: 404});
@@ -59,10 +60,6 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   const tags = product.tags ?? [];
   const exclusiveReq = parseExclusiveTag(tags);
-  const unlocked = await fetchUnlockedExclusives(
-    context.customerAccount,
-    context.supabase,
-  );
   const isUnlocked = exclusiveReq ? unlocked[exclusiveReq.key] : true;
 
   return {product, colorVariants, exclusiveReq, isUnlocked};
@@ -288,7 +285,7 @@ const STORY_BLOCKS = [
     tag: 'DESIGN',
     title: 'Modelagem que Valoriza o Físico',
     desc: 'Uma camiseta desenvolvida com caimento perfeito e leve definição no bíceps, construída com atenção a cada detalhe e um acabamento refinado. Feita para valorizar o físico com equilíbrio entre estética e conforto.',
-    img: '/images/pdp/feature-modelagem.jpeg',
+    img: '/images/pdp/feature-modelagem.webp',
     alt: 'Modelagem BlackTrunk',
     reverse: false,
     dark: false,
@@ -297,7 +294,7 @@ const STORY_BLOCKS = [
     tag: 'MATERIAL',
     title: 'Algodão Performance™',
     desc: 'A união do algodão nobre com fibras de elastano resulta em uma malha de 180g/m², gramatura ideal para conforto e performance. Fresca, macia e com elasticidade que garante liberdade de movimento e recuperação imediata da forma — sem lacear, sem deformar.',
-    img: '/images/pdp/feature-algodao.jpeg',
+    img: '/images/pdp/feature-algodao.webp',
     alt: 'Algodão Performance BlackTrunk',
     reverse: true,
     dark: true,
@@ -306,7 +303,7 @@ const STORY_BLOCKS = [
     tag: 'VERSATILIDADE',
     title: 'Do Treino ao Dia a Dia',
     desc: 'Uma peça pensada para transitar entre o treino e o dia a dia. Tecnologia respirável para a academia, caimento que se mantém com o uso e tecido que não amassa. Uma única peça para toda sua rotina.',
-    img: '/images/pdp/feature-treino.jpeg',
+    img: '/images/pdp/feature-treino.webp',
     alt: 'Do treino ao dia a dia',
     reverse: false,
     dark: false,
@@ -345,9 +342,9 @@ function ProductStory() {
 }
 
 const LIFESTYLE_IMAGES = [
-  {src: '/images/pdp/feature-modelagem.jpeg', alt: 'BlackTrunk lifestyle'},
-  {src: '/images/pdp/feature-algodao.jpeg', alt: 'Algodão Performance BlackTrunk'},
-  {src: '/images/pdp/feature-treino.jpeg', alt: 'Do treino ao dia a dia'},
+  {src: '/images/pdp/feature-modelagem.webp', alt: 'BlackTrunk lifestyle'},
+  {src: '/images/pdp/feature-algodao.webp', alt: 'Algodão Performance BlackTrunk'},
+  {src: '/images/pdp/feature-treino.webp', alt: 'Do treino ao dia a dia'},
 ] as const;
 
 function LifestyleGallery() {

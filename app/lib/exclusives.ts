@@ -29,25 +29,28 @@ const NONE_UNLOCKED: UnlockedMap = {supino: false, agachamento: false};
 export async function fetchUnlockedExclusives(
   customerAccount: CustomerAccount,
   supabase: SupabaseClient,
+  /**
+   * Pass the already-awaited isLoggedIn() result when calling from deferred
+   * data: the CAPI token refresh must happen before the response streams
+   * (Set-Cookie), never inside a deferred promise.
+   */
+  loggedIn?: boolean,
 ): Promise<UnlockedMap> {
   try {
-    if (!(await customerAccount.isLoggedIn())) return NONE_UNLOCKED;
+    if (loggedIn === false) return NONE_UNLOCKED;
+    if (loggedIn === undefined && !(await customerAccount.isLoggedIn())) {
+      return NONE_UNLOCKED;
+    }
 
     const {data} = await customerAccount.query(CUSTOMER_ID_QUERY);
     const shopifyId = data?.customer?.id;
     if (!shopifyId) return NONE_UNLOCKED;
 
-    const {data: user} = await supabase
-      .from('users')
-      .select('id')
-      .eq('shopify_id', shopifyId)
-      .maybeSingle();
-    if (!user) return NONE_UNLOCKED;
-
+    // Single round-trip: inner join filters records by the user's shopify_id.
     const {data: records} = await supabase
       .from('personal_records')
-      .select('exercise, weight_kg')
-      .eq('user_id', user.id);
+      .select('exercise, weight_kg, users!inner(shopify_id)')
+      .eq('users.shopify_id', shopifyId);
     if (!records?.length) return NONE_UNLOCKED;
 
     const best: Record<ExclusiveKey, number> = {supino: 0, agachamento: 0};

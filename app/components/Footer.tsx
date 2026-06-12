@@ -13,7 +13,7 @@ export function Footer(_props: FooterProps) {
     <footer className="footer">
       <div className="footer-hero">
         <NavLink to="/" className="footer-logo-link">
-          <span className="footer-wordmark">BLACK TRUNK</span>
+          <span className="footer-wordmark">BLACKTRUNK</span>
           <BtSymbol size={40} />
         </NavLink>
         <div className="footer-social">

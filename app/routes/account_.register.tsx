@@ -108,7 +108,7 @@ export default function Register() {
         </div>
 
         <Link to="/" className="reg-logo-link">
-          <span className="reg-logo-text">BLACK TRUNK</span>
+          <span className="reg-logo-text">BLACKTRUNK</span>
           <span className="reg-logo-icon">
             <BtSymbol size={20} />
           </span>

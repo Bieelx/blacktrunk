@@ -68,8 +68,14 @@ export function links() {
 }
 
 export async function loader(args: Route.LoaderArgs) {
+  // Awaited BEFORE the response streams: if the CAPI access token expired,
+  // the refresh writes the session here, while Set-Cookie can still be sent.
+  // Refreshing inside deferred data loses the new token (headers already
+  // sent), forcing a full OAuth refresh on every subsequent request.
+  const isLoggedIn = await args.context.customerAccount.isLoggedIn();
+
   // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
+  const deferredData = loadDeferredData(args, isLoggedIn);
 
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
@@ -120,7 +126,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
  * fetched after the initial page load. If it's unavailable, the page should still 200.
  * Make sure to not throw any errors here, as it will cause the page to 500.
  */
-function loadDeferredData({context}: Route.LoaderArgs) {
+function loadDeferredData({context}: Route.LoaderArgs, isLoggedIn: boolean) {
   const {storefront, customerAccount, cart, env} = context;
 
   // defer the footer query (below the fold)
@@ -138,8 +144,8 @@ function loadDeferredData({context}: Route.LoaderArgs) {
     });
   // Profile used for header chrome: real name everywhere, photo in the popup.
   // Username is ranking-only, so it's just a fallback when no real name is set.
-  const profile = customerAccount.isLoggedIn().then(async (loggedIn) => {
-    if (!loggedIn) return {name: null, avatar: null};
+  const profile = (async () => {
+    if (!isLoggedIn) return {name: null, avatar: null};
     try {
       const {data} = await customerAccount.query(CUSTOMER_PROFILE_QUERY);
       const c = data?.customer;
@@ -150,11 +156,11 @@ function loadDeferredData({context}: Route.LoaderArgs) {
     } catch {
       return {name: null, avatar: null};
     }
-  });
+  })();
 
   return {
     cart: cart.get(),
-    isLoggedIn: customerAccount.isLoggedIn(),
+    isLoggedIn: Promise.resolve(isLoggedIn),
     customerName: profile.then((p) => p.name),
     customerAvatar: profile.then((p) => p.avatar),
     footer,

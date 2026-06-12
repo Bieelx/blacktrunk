@@ -540,6 +540,18 @@ export type CustomerIdForAuthorizeQuery = {
   customer: Pick<CustomerAccountAPI.Customer, 'id'>;
 };
 
+export type CustomerEmailForAdminQueryVariables = CustomerAccountAPI.Exact<{
+  [key: string]: never;
+}>;
+
+export type CustomerEmailForAdminQuery = {
+  customer: {
+    emailAddress?: CustomerAccountAPI.Maybe<
+      Pick<CustomerAccountAPI.CustomerEmailAddress, 'emailAddress'>
+    >;
+  };
+};
+
 export type CustomerProfileQueryVariables = CustomerAccountAPI.Exact<{
   [key: string]: never;
 }>;
@@ -576,6 +588,10 @@ interface GeneratedQueryTypes {
   '#graphql\n  query CustomerIdForAuthorize {\n    customer {\n      id\n    }\n  }\n': {
     return: CustomerIdForAuthorizeQuery;
     variables: CustomerIdForAuthorizeQueryVariables;
+  };
+  '#graphql\n  query CustomerEmailForAdmin {\n    customer {\n      emailAddress {\n        emailAddress\n      }\n    }\n  }\n': {
+    return: CustomerEmailForAdminQuery;
+    variables: CustomerEmailForAdminQueryVariables;
   };
   '#graphql\n  query CustomerProfile {\n    customer {\n      id\n      firstName\n      lastName\n      username: metafield(namespace: "custom", key: "username") {\n        value\n      }\n      pfp: metafield(namespace: "custom", key: "pfp") {\n        value\n      }\n    }\n  }\n': {
     return: CustomerProfileQuery;

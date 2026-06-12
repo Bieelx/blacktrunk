@@ -7,27 +7,46 @@ import {
   fetchUnlockedExclusives,
   type ExclusiveKey,
 } from '~/lib/exclusives';
+import {getCurrentUser} from '~/lib/current-user';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB — Supabase free tier limit
 
 export async function loader({context}: Route.LoaderArgs) {
+  const [unlocked, currentUser] = await Promise.all([
+    fetchUnlockedExclusives(context.customerAccount, context.supabase),
+    getCurrentUser(context),
+  ]);
   return {
-    unlocked: await fetchUnlockedExclusives(
-      context.customerAccount,
-      context.supabase,
-    ),
+    unlocked,
+    // Username is read straight from the server session — the form only ever
+    // displays it; it never trusts a client-supplied value.
+    username: currentUser?.username ?? null,
   };
 }
 
 export async function action({request, context}: Route.ActionArgs) {
+  // Identify the submitter from the signed OAuth session, NOT from the form.
+  // Any username typed/edited in the DOM/console is ignored entirely.
+  const user = await getCurrentUser(context);
+  if (!user) {
+    return data(
+      {error: 'Faça login para enviar seu vídeo.'},
+      {status: 401},
+    );
+  }
+  const username = user.username;
+
   const form = await request.formData();
-  const username = String(form.get('username') ?? '').trim().toLowerCase();
   const exercise = String(form.get('exercise') ?? '') as ExclusiveKey;
   const weightKg = Number(form.get('weight_kg') ?? 0);
   const video = form.get('video') as File | null;
 
   // Validate inputs
-  if (!username) return data({error: 'Nome de usuário obrigatório.'}, {status: 400});
+  if (!username)
+    return data(
+      {error: 'Sua conta não tem um nome de usuário. Defina em Meu Perfil.'},
+      {status: 400},
+    );
   if (exercise !== 'supino' && exercise !== 'agachamento')
     return data({error: 'Exercício inválido.'}, {status: 400});
   if (!weightKg || weightKg <= 0)
@@ -38,16 +57,6 @@ export async function action({request, context}: Route.ActionArgs) {
     return data({error: 'Vídeo muito grande. Máximo 50MB.'}, {status: 400});
   if (!video.type.startsWith('video/'))
     return data({error: 'Arquivo inválido. Envie um vídeo.'}, {status: 400});
-
-  // Check username exists
-  const {data: user, error: userErr} = await context.supabase
-    .from('users')
-    .select('id')
-    .eq('username', username)
-    .maybeSingle();
-
-  if (userErr) return data({error: 'Erro ao verificar usuário.'}, {status: 500});
-  if (!user) return data({error: 'Usuário não encontrado. Crie uma conta primeiro.'}, {status: 404});
 
   // Upload video to Supabase Storage
   const ext = video.name.split('.').pop() ?? 'mp4';
@@ -94,7 +103,7 @@ const EXCLUSIVES = [
   {
     key: 'supino',
     title: 'CAMISETA EXCLUSIVA\nSUPINO 100KG',
-    img: '/images/exclusivas/supino-100kg.png',
+    img: '/images/exclusivas/supino-100kg.webp',
     alt: 'Camiseta Exclusiva Supino 100kg',
     requirement: '100KG',
     exercise: 'Supino',
@@ -103,7 +112,7 @@ const EXCLUSIVES = [
   {
     key: 'agachamento',
     title: 'CAMISETA EXCLUSIVA\nAGACHAMENTO 150KG',
-    img: '/images/exclusivas/agachamento-150kg.png',
+    img: '/images/exclusivas/agachamento-150kg.webp',
     alt: 'Camiseta Exclusiva Agachamento 150kg',
     requirement: '150KG',
     exercise: 'Agachamento',
@@ -111,7 +120,7 @@ const EXCLUSIVES = [
   },
 ];
 
-function SubmitForm() {
+function SubmitForm({username}: {username: string | null}) {
   const fetcher = useFetcher<typeof action>();
   const [exercise, setExercise] = useState<ExclusiveKey>('supino');
   const [fileName, setFileName] = useState<string | null>(null);
@@ -129,6 +138,41 @@ function SubmitForm() {
       return;
     }
     setFileName(file.name);
+  }
+
+  // Logged out: no form at all. Identity must come from a real session.
+  if (!username) {
+    return (
+      <section className="excl-form-section excl-form-section--locked" id="enviar-video">
+        <div className="excl-locked">
+          <div className="excl-locked-glow" aria-hidden />
+          <div className="excl-locked-icon" aria-hidden>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+            </svg>
+          </div>
+
+          <span className="excl-locked-badge">ACESSO EXCLUSIVO</span>
+          <h2 className="excl-locked-title">ENVIE SEU VÍDEO</h2>
+          <p className="excl-locked-sub">
+            Entre na sua conta para enviar seu PR. O envio fica vinculado ao seu
+            perfil — ninguém pode enviar no seu nome.
+          </p>
+
+          <a href="/account/login" className="excl-locked-cta">
+            <span>Entrar para enviar</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+
+          <p className="excl-locked-alt">
+            Ainda não faz parte? <a href="/account/register">Criar conta</a>
+          </p>
+        </div>
+      </section>
+    );
   }
 
   if (success) {
@@ -168,13 +212,17 @@ function SubmitForm() {
 
         <div className="excl-form-row">
           <div className="excl-form-group">
-            <label className="excl-form-label">Nome de usuário *</label>
+            <label className="excl-form-label">Nome de usuário</label>
+            {/* Read-only: identity comes from the server session, not this field.
+                The value is never submitted — the action reads it from the
+                OAuth session, so editing the DOM/console has no effect. */}
             <input
               type="text"
-              name="username"
               className="excl-form-input"
-              placeholder="@seu_usuario"
-              required
+              value={`@${username}`}
+              readOnly
+              disabled
+              aria-readonly="true"
             />
           </div>
           <div className="excl-form-group">
@@ -308,7 +356,7 @@ function ManifestoSection() {
 }
 
 export default function ExclusivasPage() {
-  const {unlocked} = useLoaderData<typeof loader>();
+  const {unlocked, username} = useLoaderData<typeof loader>();
 
   return (
     <div className="excl-page">
@@ -396,7 +444,7 @@ export default function ExclusivasPage() {
       </section>
 
       {/* Section 2 — Envie seu vídeo */}
-      <SubmitForm />
+      <SubmitForm username={username} />
 
       {/* Section 3 — Manifesto */}
       <ManifestoSection />

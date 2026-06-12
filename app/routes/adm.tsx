@@ -3,8 +3,7 @@ import {data, useLoaderData, useFetcher} from 'react-router';
 import type {MetaFunction} from 'react-router';
 import type {Route} from './+types/adm';
 import type {VideoSubmission} from '~/lib/supabase';
-
-const ADMIN_PASSWORD = 'blacktrunk';
+import {requireAdmin, logAdminAction} from '~/lib/admin-auth';
 
 function extractStoragePath(videoUrl: string): string | null {
   const marker = '/object/public/videos/';
@@ -15,7 +14,9 @@ function extractStoragePath(videoUrl: string): string | null {
 
 export const meta: MetaFunction = () => [{title: 'BlackTrunk | Admin'}];
 
-export async function loader({context}: Route.LoaderArgs) {
+export async function loader({request, context}: Route.LoaderArgs) {
+  const email = await requireAdmin(context);
+  await logAdminAction(context, email, 'view', request);
   const {data: submissions, error} = await context.supabase
     .from('video_submissions')
     .select('*')
@@ -27,6 +28,7 @@ export async function loader({context}: Route.LoaderArgs) {
 }
 
 export async function action({request, context}: Route.ActionArgs) {
+  const adminEmail = await requireAdmin(context);
   const form = await request.formData();
   const intent = String(form.get('intent') ?? '');
   const submissionId = String(form.get('submissionId') ?? '');
@@ -67,6 +69,7 @@ export async function action({request, context}: Route.ActionArgs) {
       await context.supabase.storage.from('videos').remove([storagePath]);
     }
 
+    await logAdminAction(context, adminEmail, `approve:${submissionId}`, request);
     return data({success: true, intent: 'approve'});
   }
 
@@ -89,6 +92,7 @@ export async function action({request, context}: Route.ActionArgs) {
       await context.supabase.storage.from('videos').remove([storagePath]);
     }
 
+    await logAdminAction(context, adminEmail, `reject:${submissionId}`, request);
     return data({success: true, intent: 'reject'});
   }
 
@@ -263,48 +267,7 @@ type TabKey = 'pending' | 'approved' | 'rejected';
 
 export default function AdmPage() {
   const {submissions, fetchError} = useLoaderData<typeof loader>();
-  const [authenticated, setAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
   const [tab, setTab] = useState<TabKey>('pending');
-
-  function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setAuthenticated(true);
-      setLoginError('');
-    } else {
-      setLoginError('Senha incorreta.');
-    }
-  }
-
-  if (!authenticated) {
-    return (
-      <div className="adm-page adm-page--login">
-        <div className="adm-login-wrap">
-          <div className="adm-login-logo">BT</div>
-          <h1 className="adm-login-title">Admin</h1>
-          <form className="adm-login-form" onSubmit={handleLogin}>
-            <div className="adm-field-group">
-              <label className="adm-label">Senha</label>
-              <input
-                type="password"
-                className="adm-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoFocus
-              />
-            </div>
-            {loginError && <p className="adm-error">{loginError}</p>}
-            <button type="submit" className="adm-btn-primary">
-              Entrar
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   const counts: Record<TabKey, number> = {
     pending: submissions.filter((s) => s.status === 'pending').length,
