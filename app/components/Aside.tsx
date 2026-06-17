@@ -1,8 +1,11 @@
 import {
   createContext,
+  isValidElement,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import {useId} from 'react';
@@ -63,7 +66,11 @@ export function Aside({
       <button className="close-outside" onClick={close} />
       <aside data-aside={type}>
         <header>
-          <h3 id={id}>{heading}</h3>
+          {isValidElement(heading) ? (
+            <div id={id}>{heading}</div>
+          ) : (
+            <h3 id={id}>{heading}</h3>
+          )}
           <button className="close reset" onClick={close} aria-label="Close">
             &times;
           </button>
@@ -78,15 +85,11 @@ const AsideContext = createContext<AsideContextValue | null>(null);
 
 Aside.Provider = function AsideProvider({children}: {children: ReactNode}) {
   const [type, setType] = useState<AsideType>('closed');
+  const close = useCallback(() => setType('closed'), []);
+  const value = useMemo(() => ({type, open: setType, close}), [type, close]);
 
   return (
-    <AsideContext.Provider
-      value={{
-        type,
-        open: setType,
-        close: () => setType('closed'),
-      }}
-    >
+    <AsideContext.Provider value={value}>
       {children}
     </AsideContext.Provider>
   );

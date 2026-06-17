@@ -1,6 +1,5 @@
 import {Analytics, getShopAnalytics, useNonce} from '@shopify/hydrogen';
 import {
-  Outlet,
   useRouteError,
   isRouteErrorResponse,
   type ShouldRevalidateFunction,
@@ -8,7 +7,7 @@ import {
   Meta,
   Scripts,
   ScrollRestoration,
-  useRouteLoaderData,
+  useLoaderData,
 } from 'react-router';
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
@@ -174,7 +173,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -193,11 +192,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
 }
 
 export default function App() {
-  const data = useRouteLoaderData<RootLoader>('root');
-
-  if (!data) {
-    return <Outlet />;
-  }
+  const data = useLoaderData<RootLoader>();
 
   return (
     <Analytics.Provider
@@ -205,9 +200,15 @@ export default function App() {
       shop={data.shop}
       consent={data.consent}
     >
-      <PageLayout {...data}>
-        <Outlet />
-      </PageLayout>
+      <PageLayout
+        cart={data.cart}
+        footer={data.footer}
+        header={data.header}
+        isLoggedIn={data.isLoggedIn}
+        customerName={data.customerName}
+        customerAvatar={data.customerAvatar}
+        publicStoreDomain={data.publicStoreDomain}
+      />
     </Analytics.Provider>
   );
 }
@@ -236,4 +237,3 @@ export function ErrorBoundary() {
     </div>
   );
 }
-

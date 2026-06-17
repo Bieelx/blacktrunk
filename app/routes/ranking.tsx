@@ -1,9 +1,10 @@
-import {useState} from 'react';
-import {Link, useLoaderData} from 'react-router';
+import {memo, useRef, useState} from 'react';
+import {Link} from 'react-router';
 import type {CSSProperties} from 'react';
 import {CrownIcon, BenchIcon, SquatIcon} from '~/components/Icons';
-import {buildRanking, type RankingEntry} from '~/lib/ranking';
+import type {RankingData, RankingEntry} from '~/lib/ranking';
 import type {Route} from './+types/ranking';
+import {useClientJson} from '~/lib/client-json';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Ranking | BlackTrunk'}];
@@ -16,17 +17,10 @@ type Entry = {
   handle: string;
 };
 
-export async function loader({context}: Route.LoaderArgs) {
-  const ranking = await buildRanking(context.supabase);
+type Boards = {supino: Entry[]; agachamento: Entry[]};
 
-  function withPositions(entries: RankingEntry[]): Entry[] {
-    return entries.map((entry, i) => ({...entry, position: i + 1}));
-  }
-
-  return {
-    supino: withPositions(ranking.supino),
-    agachamento: withPositions(ranking.agachamento),
-  };
+function withPositions(entries: RankingEntry[]): Entry[] {
+  return entries.map((entry, i) => ({...entry, position: i + 1}));
 }
 
 function initials(name: string) {
@@ -41,13 +35,19 @@ function avg(entries: Entry[]) {
   return (entries.reduce((s, e) => s + e.weight, 0) / entries.length).toFixed(1);
 }
 
-export default function RankingPage() {
-  const {supino, agachamento} = useLoaderData<typeof loader>();
+const RankingPage = memo(function RankingPage() {
+  // Loaded outside React Router navigation so slow Supabase requests cannot
+  // hold the next route commit.
+  const {data, loading} = useClientJson<RankingData>('/api/ranking');
+  const boards: Boards = {
+    supino: withPositions(data?.supino ?? []),
+    agachamento: withPositions(data?.agachamento ?? []),
+  };
   const [tab, setTab] = useState<'supino' | 'agachamento'>('supino');
-  const entries = tab === 'supino' ? supino : agachamento;
-  const top3 = entries.slice(0, 3);
-  const rest = entries.slice(3);
-  const maxWeight = entries.length > 0 ? entries[0].weight : 1;
+  // If page was already loading (showed skeleton), skip entry animations when
+  // data arrives to avoid opacity:0 flash during animation delays.
+  const shownSkeleton = useRef(loading);
+  const skipAnim = shownSkeleton.current && !loading;
 
   return (
     <div className="rp-page">
@@ -81,7 +81,75 @@ export default function RankingPage() {
         </div>
       </div>
 
-      <div className="rp-body">
+      {loading ? (
+        <RankingSkeleton />
+      ) : (
+        <RankingBody boards={boards} tab={tab} skipAnim={skipAnim} />
+      )}
+    </div>
+  );
+});
+
+function RankingSkeleton() {
+  return (
+    <div className="rp-body rp-skeleton">
+      <div className="rp-stats">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="rp-stat-card">
+            <div className="rp-stat-icon sk-block sk-block--icon" />
+            <div className="rp-stat-body">
+              <span className="sk-block sk-block--label" />
+              <span className="sk-block sk-block--value" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rp-podium">
+        {[1, 0, 2].map((i) => (
+          <div
+            key={i}
+            className={`rp-pcard${i === 0 ? ' rp-pcard--featured' : ''} sk-pcard`}
+          >
+            <div className="rp-pcard-avatar sk-block sk-block--avatar" />
+            <span className="sk-block sk-block--name" />
+            <span className="sk-block sk-block--weight" />
+          </div>
+        ))}
+      </div>
+
+      <div className="rp-list-section">
+        <span className="sk-block sk-block--list-label" />
+        <ol className="rp-list">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <li key={i} className="rp-entry sk-entry">
+              <div className="rp-entry-inner" style={{pointerEvents: 'none'}}>
+                <span className="sk-block sk-block--pos" />
+                <div className="rp-avatar sk-block sk-block--avatar-sm" />
+                <div className="rp-entry-info" style={{flex: 1}}>
+                  <span className="sk-block sk-block--entry-name" />
+                  <span className="sk-block sk-block--bar" />
+                </div>
+                <span className="sk-block sk-block--kg" />
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+export default RankingPage;
+
+function RankingBody({boards, tab, skipAnim}: {boards: Boards; tab: 'supino' | 'agachamento'; skipAnim?: boolean}) {
+  const entries = tab === 'supino' ? boards.supino : boards.agachamento;
+  const top3 = entries.slice(0, 3);
+  const rest = entries.slice(3);
+  const maxWeight = entries.length > 0 ? entries[0].weight : 1;
+
+  return (
+    <div className={`rp-body${skipAnim ? ' rp-body--instant' : ''}`}>
         <div className="rp-stats">
           <div className="rp-stat-card">
             <div className="rp-stat-icon"><CrownIcon /></div>
@@ -153,7 +221,6 @@ export default function RankingPage() {
             )}
           </>
         )}
-      </div>
     </div>
   );
 }

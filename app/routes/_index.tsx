@@ -1,6 +1,6 @@
 import {Await, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/_index';
-import {Suspense, useEffect, useRef, useState} from 'react';
+import {Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {Image, Money} from '@shopify/hydrogen';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
@@ -8,17 +8,17 @@ import type {RecommendedProductsQuery} from 'storefrontapi.generated';
 import {useVariantUrl} from '~/lib/variants';
 import {MockShopNotice} from '~/components/MockShopNotice';
 import {FirstPlaceIcon, SecondPlaceIcon, ThirdPlaceIcon} from '~/components/Icons';
-import {EXCLUSIVE_PRODUCT_HANDLES, fetchUnlockedExclusives} from '~/lib/exclusives';
-import {buildRanking, type RankingData} from '~/lib/ranking';
+import {EXCLUSIVE_PRODUCT_HANDLES} from '~/lib/exclusives';
+import type {UnlockedMap} from '~/lib/exclusives';
+import type {RankingData} from '~/lib/ranking';
+import {useClientJson} from '~/lib/client-json';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'BlackTrunk | Marca dos Campeões'}];
 };
 
 export async function loader(args: Route.LoaderArgs) {
-  // Awaited before streaming so a CAPI token refresh can still Set-Cookie.
-  const loggedIn = await args.context.customerAccount.isLoggedIn();
-  const deferredData = loadDeferredData(args, loggedIn);
+  const deferredData = loadDeferredData(args);
   const criticalData = await loadCriticalData(args);
   return {...deferredData, ...criticalData};
 }
@@ -29,29 +29,23 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   };
 }
 
-function loadDeferredData({context}: Route.LoaderArgs, loggedIn: boolean) {
+function loadDeferredData({context}: Route.LoaderArgs) {
+  // Only Storefront data is deferred here. The Supabase-backed ranking and
+  // unlocked-exclusives sections are fetched client-side (see RankingSection /
+  // ExclusivesSection) — a slow Supabase <Await> on the home would hold a
+  // pending Suspense boundary that blocks the next client navigation from
+  // committing, which made every link feel frozen until it settled.
   const bestsellers = context.storefront
     .query(BESTSELLERS_QUERY)
     .catch((error: Error) => {
       console.error(error);
       return null;
     });
-  const ranking = buildRanking(context.supabase).catch((error: Error) => {
-    console.error(error);
-    return null;
-  });
-  // Deferred, but with login already resolved: the CAPI token refresh cannot
-  // happen here (headers already sent), so it ran awaited in the loader.
-  const unlocked = fetchUnlockedExclusives(
-    context.customerAccount,
-    context.supabase,
-    loggedIn,
-  );
-  return {bestsellers, ranking, unlocked};
+  return {bestsellers};
 }
 
 export default function Homepage() {
-  const {isShopLinked, bestsellers, ranking} = useLoaderData<typeof loader>();
+  const {isShopLinked, bestsellers} = useLoaderData<typeof loader>();
   return (
     <div className="home">
       {isShopLinked ? null : <MockShopNotice />}
@@ -59,7 +53,7 @@ export default function Homepage() {
       <BestsellersSection products={bestsellers} />
       <ExclusivesSection />
       <MissionSection />
-      <RankingSection ranking={ranking} />
+      <RankingSection />
       <QualitySection />
       <SocialSection />
     </div>
@@ -92,9 +86,9 @@ const HERO_SLIDES = [
 ];
 
 function HeroSection() {
-  const [emblaRef, emblaApi] = useEmblaCarousel({loop: true}, [
-    Autoplay({delay: 5000, stopOnInteraction: false}),
-  ]);
+  const heroOptions = useMemo(() => ({loop: true}), []);
+  const heroPlugins = useRef([Autoplay({delay: 5000, stopOnInteraction: false})]);
+  const [emblaRef, emblaApi] = useEmblaCarousel(heroOptions, heroPlugins.current);
 
   return (
     <div className="hero-carousel" ref={emblaRef}>
@@ -107,7 +101,6 @@ function HeroSection() {
                 alt={slide.alt}
                 className="hero-bg"
                 loading={i === 0 ? 'eager' : 'lazy'}
-                fetchPriority={i === 0 ? 'high' : 'auto'}
                 decoding={i === 0 ? 'sync' : 'async'}
               />
             )}
@@ -134,10 +127,9 @@ function BestsellersSection({
   products: Promise<RecommendedProductsQuery | null>;
 }) {
   const autoplay = useRef(Autoplay({delay: 10000, stopOnInteraction: false}));
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {align: 'start', dragFree: true, loop: true},
-    [autoplay.current],
-  );
+  const bestOptions = useMemo(() => ({align: 'start' as const, dragFree: true, loop: true}), []);
+  const bestPlugins = useRef([autoplay.current]);
+  const [emblaRef, emblaApi] = useEmblaCarousel(bestOptions, bestPlugins.current);
 
   return (
     <section className="bestsellers-section">
@@ -150,19 +142,22 @@ function BestsellersSection({
       <div className="bestsellers-carousel-wrapper">
         <Suspense fallback={<div className="section-loading">Carregando...</div>}>
           <Await resolve={products}>
-            {(response) => (
-              <div className="bestsellers-embla" ref={emblaRef}>
-                <div className="bestsellers-embla-container">
-                  {response
-                    ? response.products.nodes.map((product) => (
-                        <div key={product.id} className="bestsellers-embla-slide">
-                          <BestsellerItem product={product} />
-                        </div>
-                      ))
-                    : null}
+            {(response) => {
+              console.debug('[bestsellers] Await resolved, response=', response ? 'ok' : 'null');
+              return (
+                <div className="bestsellers-embla" ref={emblaRef}>
+                  <div className="bestsellers-embla-container">
+                    {response
+                      ? response.products.nodes.map((product) => (
+                          <div key={product.id} className="bestsellers-embla-slide">
+                            <BestsellerItem product={product} />
+                          </div>
+                        ))
+                      : null}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            }}
           </Await>
         </Suspense>
         <button
@@ -234,7 +229,10 @@ const EXCLUSIVES = [
 ];
 
 function ExclusivesSection() {
-  const {unlocked} = useLoaderData<typeof loader>();
+  // Fetched outside React Router navigation so slow Supabase/CAPI requests
+  // cannot hold the next route commit.
+  const {data} = useClientJson<{unlocked: UnlockedMap}>('/api/exclusivas-data');
+  const unlocked = data?.unlocked ?? {supino: false, agachamento: false};
 
   return (
     <section className="exclusives-section">
@@ -242,15 +240,7 @@ function ExclusivesSection() {
         <h2 className="section-title">EXCLUSIVAS</h2>
         <p className="section-tagline">Prove seu recorde. Ganhe o símbolo.</p>
       </div>
-      <Suspense
-        fallback={
-          <ExclusivesGrid unlocked={{supino: false, agachamento: false}} />
-        }
-      >
-        <Await resolve={unlocked}>
-          {(data) => <ExclusivesGrid unlocked={data} />}
-        </Await>
-      </Suspense>
+      <ExclusivesGrid unlocked={unlocked} />
       <div className="section-cta">
         <Link to="/exclusivas" className="btn-loja">
           VER LINHA EXCLUSIVA{' '}
@@ -392,7 +382,11 @@ function topThree(entries: RankingData['supino']) {
     .map((entry, i) => ({position: i + 1, name: entry.name, weight: entry.weight}));
 }
 
-function RankingSection({ranking}: {ranking: Promise<RankingData | null>}) {
+function RankingSection() {
+  // Fetched outside React Router navigation so slow Supabase requests cannot
+  // hold the next route commit.
+  const {data} = useClientJson<RankingData>('/api/ranking');
+
   return (
     <section className="ranking-section">
       <div className="section-header">
@@ -403,26 +397,13 @@ function RankingSection({ranking}: {ranking: Promise<RankingData | null>}) {
           os desafios do Supino 100kg e Agachamento 150kg.
         </p>
       </div>
-      <Suspense
-        fallback={
-          <div className="ranking-grid">
-            <Leaderboard title="SUPINO" entries={[]} />
-            <Leaderboard title="AGACHAMENTO" entries={[]} />
-          </div>
-        }
-      >
-        <Await resolve={ranking}>
-          {(data) => (
-            <div className="ranking-grid">
-              <Leaderboard title="SUPINO" entries={topThree(data?.supino ?? [])} />
-              <Leaderboard
-                title="AGACHAMENTO"
-                entries={topThree(data?.agachamento ?? [])}
-              />
-            </div>
-          )}
-        </Await>
-      </Suspense>
+      <div className="ranking-grid">
+        <Leaderboard title="SUPINO" entries={topThree(data?.supino ?? [])} />
+        <Leaderboard
+          title="AGACHAMENTO"
+          entries={topThree(data?.agachamento ?? [])}
+        />
+      </div>
       <div className="section-cta">
         <Link to="/ranking" className="btn-loja">
           VER RANKINGS{' '}

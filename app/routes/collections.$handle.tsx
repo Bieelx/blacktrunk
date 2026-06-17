@@ -111,13 +111,8 @@ export default function Collection() {
         )}
 
         <Pagination connection={collection.products}>
-          {({nodes, isLoading, NextLink, PreviousLink}) => (
+          {({nodes, isLoading, NextLink}) => (
             <>
-              <div className="plp-prev-wrap">
-                <PreviousLink className="plp-load-btn">
-                  {isLoading ? 'Carregando...' : 'Carregar anteriores'}
-                </PreviousLink>
-              </div>
 
               <div
                 className={`plp-grid${isExclusiva ? ' plp-grid--2col' : ''}`}

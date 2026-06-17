@@ -73,7 +73,12 @@ export function Header({
     <>
       <header className={headerClass}>
         <div className="header-row">
-          <NavLink prefetch="intent" to="/" className="header-logo" end>
+          <NavLink
+            prefetch="intent"
+            to="/"
+            className="header-logo"
+            end
+          >
             {shop.name.toUpperCase()}
             <BtSymbol size={28} />
           </NavLink>

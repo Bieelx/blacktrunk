@@ -1,5 +1,5 @@
-import {Await, Link} from 'react-router';
-import {Suspense, useId} from 'react';
+import {Await, Link, Outlet} from 'react-router';
+import {memo, Suspense, useId} from 'react';
 import type {
   CartApiQueryFragment,
   FooterQuery,
@@ -24,12 +24,12 @@ interface PageLayoutProps {
   customerName: Promise<string | null>;
   customerAvatar: Promise<string | null>;
   publicStoreDomain: string;
-  children?: React.ReactNode;
 }
 
-export function PageLayout({
+// memo prevents re-renders when App re-renders due to useLoaderData instability
+// in React Router concurrent mode. Outlet updates independently via router context.
+export const PageLayout = memo(function PageLayout({
   cart,
-  children = null,
   footer,
   header,
   isLoggedIn,
@@ -52,7 +52,7 @@ export function PageLayout({
           publicStoreDomain={publicStoreDomain}
         />
       )}
-      <main>{children}</main>
+      <main><Outlet /></main>
       <Footer
         footer={footer}
         header={header}
@@ -60,7 +60,7 @@ export function PageLayout({
       />
     </Aside.Provider>
   );
-}
+});
 
 function CartAside({cart}: {cart: PageLayoutProps['cart']}) {
   return (
@@ -157,4 +157,3 @@ function SearchAside() {
     </Aside>
   );
 }
-

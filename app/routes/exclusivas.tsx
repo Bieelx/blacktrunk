@@ -1,28 +1,13 @@
-import {useState} from 'react';
-import {Link, data, useFetcher, useLoaderData} from 'react-router';
+import {memo, useState} from 'react';
+import {Link, data, useFetcher} from 'react-router';
 import type {MetaFunction} from 'react-router';
 import type {Route} from './+types/exclusivas';
-import {
-  EXCLUSIVE_PRODUCT_HANDLES,
-  fetchUnlockedExclusives,
-  type ExclusiveKey,
-} from '~/lib/exclusives';
+import {EXCLUSIVE_PRODUCT_HANDLES, type ExclusiveKey} from '~/lib/exclusives';
 import {getCurrentUser} from '~/lib/current-user';
+import type {ExclusivasData} from './api.exclusivas-data';
+import {useClientJson} from '~/lib/client-json';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB — Supabase free tier limit
-
-export async function loader({context}: Route.LoaderArgs) {
-  const [unlocked, currentUser] = await Promise.all([
-    fetchUnlockedExclusives(context.customerAccount, context.supabase),
-    getCurrentUser(context),
-  ]);
-  return {
-    unlocked,
-    // Username is read straight from the server session — the form only ever
-    // displays it; it never trusts a client-supplied value.
-    username: currentUser?.username ?? null,
-  };
-}
 
 export async function action({request, context}: Route.ActionArgs) {
   // Identify the submitter from the signed OAuth session, NOT from the form.
@@ -355,8 +340,15 @@ function ManifestoSection() {
   );
 }
 
-export default function ExclusivasPage() {
-  const {unlocked, username} = useLoaderData<typeof loader>();
+const ExclusivasPage = memo(function ExclusivasPage() {
+  console.debug('[exclusivas] component render');
+  // Loaded outside React Router navigation so slow Supabase/CAPI requests
+  // cannot hold the next route commit.
+  const {data: exclusiveData} = useClientJson<ExclusivasData>(
+    '/api/exclusivas-data',
+  );
+  const unlocked = exclusiveData?.unlocked ?? {supino: false, agachamento: false};
+  const username = exclusiveData?.username ?? null;
 
   return (
     <div className="excl-page">
@@ -450,4 +442,6 @@ export default function ExclusivasPage() {
       <ManifestoSection />
     </div>
   );
-}
+});
+
+export default ExclusivasPage;
