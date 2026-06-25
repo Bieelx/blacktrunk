@@ -7,7 +7,6 @@ import Autoplay from 'embla-carousel-autoplay';
 import type {RecommendedProductsQuery} from 'storefrontapi.generated';
 import {useVariantUrl} from '~/lib/variants';
 import {MockShopNotice} from '~/components/MockShopNotice';
-import {FirstPlaceIcon, SecondPlaceIcon, ThirdPlaceIcon} from '~/components/Icons';
 import {EXCLUSIVE_PRODUCT_HANDLES} from '~/lib/exclusives';
 import type {UnlockedMap} from '~/lib/exclusives';
 import type {RankingData} from '~/lib/ranking';
@@ -379,7 +378,14 @@ function MissionSection() {
 function topThree(entries: RankingData['supino']) {
   return entries
     .slice(0, 3)
-    .map((entry, i) => ({position: i + 1, name: entry.name, weight: entry.weight}));
+    .map((entry, i) => ({position: i + 1, ...entry}));
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(' ');
+  return parts.length > 1
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
 }
 
 function RankingSection() {
@@ -424,33 +430,37 @@ function RankingSection() {
   );
 }
 
-function MedalIcon({position}: {position: number}) {
-  if (position === 1) return <FirstPlaceIcon className="medal-icon" />;
-  if (position === 2) return <SecondPlaceIcon className="medal-icon" />;
-  return <ThirdPlaceIcon className="medal-icon" />;
-}
-
 function Leaderboard({
   title,
   entries,
 }: {
   title: string;
-  entries: {position: number; name: string; weight: number}[];
+  entries: {position: number; name: string; weight: number; handle: string}[];
 }) {
+  const maxWeight = entries.length > 0 ? entries[0].weight : 1;
   return (
     <div className="leaderboard">
       <h3 className="leaderboard-title">{title}</h3>
       <ol className="leaderboard-list">
         {entries.map((entry) => (
-          <li
-            key={entry.position}
-            className={`leaderboard-entry leaderboard-pos-${entry.position}`}
-          >
-            <MedalIcon position={entry.position} />
-            <div className="leaderboard-info">
-              <span className="leaderboard-name">{entry.name}</span>
-              <span className="leaderboard-weight">{entry.weight} kg</span>
-            </div>
+          <li key={entry.position} className={`lb-row lb-pos-${entry.position}`}>
+            <Link to={`/perfil/${entry.handle}`} className="lb-row-inner">
+              <span className="lb-rank">{entry.position}</span>
+              <span className="lb-avatar">{initials(entry.name)}</span>
+              <div className="lb-info">
+                <span className="lb-name">{entry.name}</span>
+                <div className="lb-bar-track">
+                  <div
+                    className="lb-bar-fill"
+                    style={{width: `${(entry.weight / maxWeight) * 100}%`}}
+                  />
+                </div>
+              </div>
+              <span className="lb-weight">
+                {entry.weight}
+                <small>kg</small>
+              </span>
+            </Link>
           </li>
         ))}
       </ol>
