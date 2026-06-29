@@ -18,7 +18,7 @@ export function Footer(_props: FooterProps) {
         </NavLink>
         <div className="footer-social">
           <a
-            href="https://instagram.com/blacktrunk.br"
+            href="https://instagram.com/blacktrunkbr"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Instagram"
@@ -27,7 +27,7 @@ export function Footer(_props: FooterProps) {
             <InstagramIcon />
           </a>
           <a
-            href="https://tiktok.com/@blacktrunk"
+            href="https://tiktok.com/@blacktrunkbr"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="TikTok"

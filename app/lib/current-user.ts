@@ -1,6 +1,9 @@
 import type {CustomerAccount} from '@shopify/hydrogen';
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {CUSTOMER_ID_QUERY} from '~/graphql/customer-account/CustomerUsernameQuery';
+import {
+  CUSTOMER_ID_QUERY,
+  CUSTOMER_USERNAME_QUERY,
+} from '~/graphql/customer-account/CustomerUsernameQuery';
 
 type CurrentUserContext = {
   customerAccount: CustomerAccount;
@@ -35,9 +38,32 @@ export async function getCurrentUser(
       .select('id, username')
       .eq('shopify_id', shopifyId)
       .maybeSingle();
-    if (!user) return null;
 
-    return {id: user.id as string, username: (user.username as string) ?? null};
+    if (user) {
+      return {id: user.id as string, username: (user.username as string) ?? null};
+    }
+
+    // Backfill: customer is linked in Shopify (username metafield = source of
+    // truth) but has no Supabase row yet — happens for anyone who logged in
+    // without going through the custom register flow. Create the row from the
+    // metafield so they aren't stuck with a locked video submission form.
+    const {data: meta} = await context.customerAccount.query(
+      CUSTOMER_USERNAME_QUERY,
+    );
+    const username = meta?.customer?.metafield?.value ?? null;
+    if (!username) return null;
+
+    const {data: created, error: insertError} = await context.supabase
+      .from('users')
+      .insert({username, shopify_id: shopifyId})
+      .select('id, username')
+      .single();
+    if (insertError || !created) {
+      console.error('getCurrentUser backfill insert failed:', insertError);
+      return null;
+    }
+
+    return {id: created.id as string, username: created.username as string};
   } catch (error) {
     console.error('getCurrentUser failed:', error);
     return null;

@@ -199,7 +199,7 @@ function RankingBody({boards, tab, skipAnim}: {boards: Boards; tab: 'supino' | '
                       className="rp-entry"
                       style={{'--i': i} as CSSProperties}
                     >
-                      <Link to={`/perfil/${entry.handle}`} className="rp-entry-inner">
+                      <div className="rp-entry-inner">
                         <span className="rp-entry-pos">#{entry.position}</span>
                         <div className="rp-avatar">{initials(entry.name)}</div>
                         <div className="rp-entry-info">
@@ -212,8 +212,7 @@ function RankingBody({boards, tab, skipAnim}: {boards: Boards; tab: 'supino' | '
                           </div>
                         </div>
                         <span className="rp-entry-kg">{entry.weight} kg</span>
-                        <ChevronIcon />
-                      </Link>
+                      </div>
                     </li>
                   ))}
                 </ol>
@@ -250,8 +249,7 @@ function PodiumCard({
 
   const pct = Math.round((entry.weight / maxWeight) * 100);
   return (
-    <Link
-      to={`/perfil/${entry.handle}`}
+    <div
       className={`rp-pcard rp-pcard--${entry.position}${featured ? ' rp-pcard--featured' : ''}`}
       style={{'--delay': `${delay * 0.1}s`} as CSSProperties}
     >
@@ -271,16 +269,7 @@ function PodiumCard({
         <div className="rp-pcard-bar-fill" style={{'--pct': `${pct}%`} as CSSProperties} />
       </div>
       <span className="rp-pcard-pct">{pct}%</span>
-    </Link>
-  );
-}
-
-function ChevronIcon() {
-  // keep for list rows
-  return (
-    <svg className="rp-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
+    </div>
   );
 }
 
