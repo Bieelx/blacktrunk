@@ -1,5 +1,5 @@
 import {Await, Link, Outlet} from 'react-router';
-import {memo, Suspense, useId} from 'react';
+import {Suspense, useId} from 'react';
 import type {
   CartApiQueryFragment,
   FooterQuery,
@@ -26,9 +26,7 @@ interface PageLayoutProps {
   publicStoreDomain: string;
 }
 
-// memo prevents re-renders when App re-renders due to useLoaderData instability
-// in React Router concurrent mode. Outlet updates independently via router context.
-export const PageLayout = memo(function PageLayout({
+export function PageLayout({
   cart,
   footer,
   header,
@@ -60,7 +58,7 @@ export const PageLayout = memo(function PageLayout({
       />
     </Aside.Provider>
   );
-});
+}
 
 function CartAside({cart}: {cart: PageLayoutProps['cart']}) {
   return (
