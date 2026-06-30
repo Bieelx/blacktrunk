@@ -434,7 +434,7 @@ function QuickBuyModal({
             onClick={() => setAdded(true)}
             lines={
               selectedVariant
-                ? [{merchandiseId: selectedVariant.id, quantity: 1}]
+                ? [{merchandiseId: selectedVariant.id, quantity: 1, selectedVariant}]
                 : []
             }
           >
