@@ -4929,7 +4929,7 @@ aside[data-aside="filter"] > main {
 
   aside[data-aside="filter"] > header button.close.reset {
     position: absolute;
-    top: -52px;
+    top: max(-52px, calc(env(safe-area-inset-top) + 12px - 30vh));
     left: 50%;
     transform: translateX(-50%);
     background: rgba(255, 255, 255, 0.95);
@@ -4988,7 +4988,7 @@ aside[data-aside="filter"] > main {
 
   aside[data-aside="cart"] > header button.close.reset {
     position: absolute;
-    top: -52px;
+    top: max(-52px, calc(env(safe-area-inset-top) + 12px - 15vh));
     left: 50%;
     transform: translateX(-50%);
     background: rgba(255, 255, 255, 0.95);
