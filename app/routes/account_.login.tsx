@@ -4,6 +4,10 @@ import type {Route} from './+types/account_.login';
 import {BtSymbol} from '~/components/BtSymbol';
 import {customerEmailExists} from '~/lib/admin';
 
+export const meta: Route.MetaFunction = () => {
+  return [{title: 'Entrar | BlackTrunk'}];
+};
+
 export async function loader({context}: Route.LoaderArgs) {
   const isLoggedIn = await context.customerAccount.isLoggedIn();
   if (isLoggedIn) return redirect('/account');

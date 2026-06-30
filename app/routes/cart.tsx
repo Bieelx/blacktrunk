@@ -6,7 +6,7 @@ import {CartMain} from '~/components/CartMain';
 import {parseExclusiveTag, fetchUnlockedExclusives} from '~/lib/exclusives';
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Cart`}];
+  return [{title: `Carrinho | BlackTrunk`}];
 };
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;

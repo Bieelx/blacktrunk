@@ -1,8 +1,9 @@
-import {useLoaderData} from 'react-router';
+import {useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/search';
-import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
+import {getPaginationVariables, Analytics, Image, Pagination} from '@shopify/hydrogen';
 import {SearchForm} from '~/components/SearchForm';
 import {SearchResults} from '~/components/SearchResults';
+import {formatBRL} from '~/components/ProductPrice';
 import {
   type RegularSearchReturn,
   type PredictiveSearchReturn,
@@ -11,10 +12,11 @@ import {
 import type {
   RegularSearchQuery,
   PredictiveSearchQuery,
+  SearchProductFragment,
 } from 'storefrontapi.generated';
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Search`}];
+  return [{title: `Busca | BlackTrunk`}];
 };
 
 export async function loader({request, context}: Route.LoaderArgs) {
@@ -41,39 +43,126 @@ export default function SearchPage() {
   if (type === 'predictive') return null;
 
   return (
-    <div className="search">
-      <h1>Search</h1>
-      <SearchForm>
-        {({inputRef}) => (
-          <>
-            <input
-              defaultValue={term}
-              name="q"
-              placeholder="Search…"
-              ref={inputRef}
-              type="search"
-            />
-            &nbsp;
-            <button type="submit">Search</button>
-          </>
+    <div className="plp">
+      <div className="plp-sticky-zone">
+        <div className="plp-hero plp-hero--search">
+          <div className="plp-hero-overlay" />
+          <div className="plp-hero-content">
+            <h1 className="plp-hero-title">BUSCA</h1>
+            {term ? (
+              <p className="plp-hero-subtitle">Resultados para &quot;{term}&quot;</p>
+            ) : (
+              <p className="plp-hero-subtitle">Encontre seu treino</p>
+            )}
+          </div>
+        </div>
+
+        <div className="plp-toolbar">
+          <SearchForm className="search-toolbar-form">
+            {({inputRef}) => (
+              <>
+                <input
+                  defaultValue={term}
+                  name="q"
+                  placeholder="Buscar produtos…"
+                  ref={inputRef}
+                  type="search"
+                  className="search-toolbar-input"
+                />
+                <button type="submit" className="plp-toolbar-btn">
+                  Buscar
+                </button>
+              </>
+            )}
+          </SearchForm>
+        </div>
+
+        {error && <p className="search-error">{error}</p>}
+
+        {!term || !result?.total ? (
+          <SearchResults.Empty />
+        ) : (
+          <SearchResults result={result} term={term}>
+            {({products, pages, articles, term}) => (
+              <>
+                <Pagination connection={products}>
+                  {({nodes, isLoading, NextLink}) => (
+                    <>
+                      <div className="plp-grid">
+                        {nodes.map((product, index) => (
+                          <SearchPlpCard
+                            key={product.id}
+                            product={product}
+                            loading={index < 8 ? 'eager' : undefined}
+                          />
+                        ))}
+                      </div>
+                      <div className="plp-load-wrap">
+                        <NextLink className="plp-load-btn">
+                          {isLoading ? 'Carregando...' : 'Ver mais'}
+                        </NextLink>
+                      </div>
+                    </>
+                  )}
+                </Pagination>
+
+                <SearchResults.Pages pages={pages} term={term} />
+                <SearchResults.Articles articles={articles} term={term} />
+              </>
+            )}
+          </SearchResults>
         )}
-      </SearchForm>
-      {error && <p style={{color: 'red'}}>{error}</p>}
-      {!term || !result?.total ? (
-        <SearchResults.Empty />
-      ) : (
-        <SearchResults result={result} term={term}>
-          {({articles, pages, products, term}) => (
-            <div>
-              <SearchResults.Products products={products} term={term} />
-              <SearchResults.Pages pages={pages} term={term} />
-              <SearchResults.Articles articles={articles} term={term} />
-            </div>
-          )}
-        </SearchResults>
-      )}
+      </div>
+
       <Analytics.SearchView data={{searchTerm: term, searchResults: result}} />
     </div>
+  );
+}
+
+function SearchPlpCard({
+  product,
+  loading,
+}: {
+  product: SearchProductFragment;
+  loading?: 'eager' | 'lazy';
+}) {
+  const variant = product.selectedOrFirstAvailableVariant;
+  const image = variant?.image;
+  const price = variant?.price ? parseFloat(variant.price.amount) : null;
+  const compareAtAmount = variant?.compareAtPrice?.amount ?? null;
+  const compareAt = compareAtAmount ? parseFloat(compareAtAmount) : null;
+  const discount =
+    price && compareAt && compareAt > price
+      ? Math.round((1 - price / compareAt) * 100)
+      : null;
+
+  return (
+    <Link to={`/products/${product.handle}`} className="plp-card" prefetch="intent">
+      <div className="plp-card-img-wrap">
+        {image && (
+          <Image
+            data={image}
+            alt={image.altText || product.title}
+            loading={loading}
+            className="plp-card-img"
+            sizes="(min-width: 45em) 25vw, 50vw"
+          />
+        )}
+      </div>
+      <div className="plp-card-info">
+        <p className="plp-card-rating">★ 4.9</p>
+        <p className="plp-card-title">{product.title}</p>
+        <div className="plp-card-prices">
+          {compareAt && (
+            <span className="plp-card-compare">{formatBRL(compareAtAmount!)}</span>
+          )}
+          {price !== null && (
+            <span className="plp-card-price">{formatBRL(variant!.price.amount)}</span>
+          )}
+          {discount && <span className="plp-card-off">{discount}% OFF</span>}
+        </div>
+      </div>
+    </Link>
   );
 }
 

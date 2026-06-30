@@ -1,7 +1,7 @@
 import {memo, useRef, useState} from 'react';
 import {Link} from 'react-router';
 import type {CSSProperties} from 'react';
-import {CrownIcon, BenchIcon, SquatIcon} from '~/components/Icons';
+import {CrownIcon, BenchIcon, SquatIcon, UsersIcon, DumbbellIcon} from '~/components/Icons';
 import type {RankingData, RankingEntry} from '~/lib/ranking';
 import type {Route} from './+types/ranking';
 import {useClientJson} from '~/lib/client-json';
@@ -161,14 +161,14 @@ function RankingBody({boards, tab, skipAnim}: {boards: Boards; tab: 'supino' | '
             </div>
           </div>
           <div className="rp-stat-card">
-            <div className="rp-stat-icon"><UsersIcon /></div>
+            <div className="rp-stat-icon"><UsersIcon width={22} height={22} /></div>
             <div className="rp-stat-body">
               <span className="rp-stat-label">Total de atletas</span>
               <span className="rp-stat-value">{entries.length}</span>
             </div>
           </div>
           <div className="rp-stat-card">
-            <div className="rp-stat-icon"><DumbbellIcon /></div>
+            <div className="rp-stat-icon"><DumbbellIcon width={22} height={22} /></div>
             <div className="rp-stat-body">
               <span className="rp-stat-label">Média dos pesos</span>
               <span className="rp-stat-value">{avg(entries)} <small>kg</small></span>
@@ -270,28 +270,5 @@ function PodiumCard({
       </div>
       <span className="rp-pcard-pct">{pct}%</span>
     </div>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="8" r="3" />
-      <path d="M2 20c0-3 2.7-5.5 6-5.5" />
-      <circle cx="16" cy="8" r="3" />
-      <path d="M22 20c0-3-2.7-5.5-6-5.5H9c-3.3 0-6 2.5-6 5.5" />
-    </svg>
-  );
-}
-
-function DumbbellIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="10" width="3" height="4" rx="1" />
-      <rect x="5" y="8" width="2" height="8" rx="0.5" />
-      <line x1="7" y1="12" x2="17" y2="12" />
-      <rect x="17" y="8" width="2" height="8" rx="0.5" />
-      <rect x="19" y="10" width="3" height="4" rx="1" />
-    </svg>
   );
 }

@@ -2166,6 +2166,17 @@ aside header .close {
   min-height: 100vh;
 }
 
+@media (max-width: 600px) {
+  .hero {
+    aspect-ratio: 4 / 5;
+    min-height: 70vh;
+  }
+
+  .hero-bg {
+    object-position: center top;
+  }
+}
+
 /*
 * --------------------------------------------------
 * routes/_index — bestsellers
@@ -3132,6 +3143,36 @@ aside header .close {
   cursor: pointer;
   white-space: nowrap;
   transition: background 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.search-toolbar-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.search-toolbar-input {
+  flex: 1;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+  color: #111;
+}
+
+.search-error {
+  color: #e05a3a;
+  padding: 0 48px;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 44.9em) {
+  .search-error {
+    padding: 0 16px;
+  }
 }
 
 .plp-toolbar-btn:hover {

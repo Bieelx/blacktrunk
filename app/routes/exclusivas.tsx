@@ -6,6 +6,7 @@ import {EXCLUSIVE_PRODUCT_HANDLES, type ExclusiveKey} from '~/lib/exclusives';
 import {getCurrentUser} from '~/lib/current-user';
 import type {ExclusivasData} from './api.exclusivas-data';
 import {useClientJson} from '~/lib/client-json';
+import {BenchIcon, SquatIcon, LockIcon} from '~/components/Icons';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB — Supabase free tier limit
 
@@ -132,10 +133,7 @@ function SubmitForm({username}: {username: string | null}) {
         <div className="excl-locked">
           <div className="excl-locked-glow" aria-hidden />
           <div className="excl-locked-icon" aria-hidden>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-            </svg>
+            <LockIcon width={28} height={28} />
           </div>
 
           <span className="excl-locked-badge">ACESSO EXCLUSIVO</span>
@@ -234,9 +232,7 @@ function SubmitForm({username}: {username: string | null}) {
               className={`excl-exercise-btn${exercise === 'supino' ? ' active' : ''}`}
               onClick={() => setExercise('supino')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M4 12h16M12 4v16" />
-              </svg>
+              <BenchIcon width={18} height={18} />
               Supino
             </button>
             <button
@@ -244,9 +240,7 @@ function SubmitForm({username}: {username: string | null}) {
               className={`excl-exercise-btn${exercise === 'agachamento' ? ' active' : ''}`}
               onClick={() => setExercise('agachamento')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M12 4v16M8 20l4-4 4 4M8 4l4 4 4-4" />
-              </svg>
+              <SquatIcon width={18} height={18} />
               Agachamento
             </button>
           </div>
@@ -385,19 +379,7 @@ const ExclusivasPage = memo(function ExclusivasPage() {
                     </div>
                   ) : (
                     <div className="excl-card-lock">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                      </svg>
+                      <LockIcon width={20} height={20} />
                     </div>
                   )}
                   <div className="excl-card-requirement">
@@ -423,10 +405,7 @@ const ExclusivasPage = memo(function ExclusivasPage() {
                 ) : (
                   <a href="#enviar-video" className="excl-card-unlock-btn">
                     Desbloquear
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                    </svg>
+                    <LockIcon width={16} height={16} aria-hidden />
                   </a>
                 )}
               </div>

@@ -1,6 +1,6 @@
 import type {MoneyV2} from '@shopify/hydrogen/storefront-api-types';
 
-function formatBRL(amount: string): string {
+export function formatBRL(amount: string): string {
   const num = parseFloat(amount);
   const hasCents = num % 1 !== 0;
   return new Intl.NumberFormat('pt-BR', {

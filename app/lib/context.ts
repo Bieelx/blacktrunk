@@ -36,7 +36,10 @@ export async function createHydrogenRouterContext(
       cache,
       waitUntil,
       session,
-      i18n: {language: 'EN', country: 'US'},
+      // ponytail: single-locale hardcode. For multi-idioma, derive {language, country}
+      // per-request from URL prefix (e.g. /pt-br/, /en/) via Shopify i18n routing
+      // (getLocaleFromRequest) instead of this static value.
+      i18n: {language: 'PT', country: 'BR'},
       customerAccount: {
         useCustomAuthDomain: true,
       },

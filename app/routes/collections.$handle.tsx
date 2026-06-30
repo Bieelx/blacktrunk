@@ -13,7 +13,7 @@ import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {useVariantUrl} from '~/lib/variants';
 import type {CollectionQuery, ProductItemFragment} from 'storefrontapi.generated';
 import {fetchUnlockedExclusives} from '~/lib/exclusives';
-import {CrownIcon} from '~/components/Icons';
+import {CrownIcon, LockIcon} from '~/components/Icons';
 
 const EXCLUSIVE_PRODUCT_HANDLES = {
   supino: 'camiseta-algodao-performance-supino-100kg',
@@ -290,7 +290,7 @@ function PlpCard({
               <CrownIcon /> Exclusiva
             </span>
             <div className="plp-card-lock-overlay" aria-hidden="true">
-              <LockIcon />
+              <LockIcon width={40} height={40} />
               <span className="plp-card-lock-label">Bloqueada</span>
             </div>
           </>
@@ -397,7 +397,7 @@ function LojaExclCard({
           </div>
         ) : (
           <div className="plp-card-lock-overlay" aria-hidden="true">
-            <LockIcon />
+            <LockIcon width={40} height={40} />
             <span className="plp-card-lock-label">Bloqueada</span>
           </div>
         )}
@@ -488,15 +488,6 @@ function FilterIcon() {
       <line x1="4" y1="6" x2="20" y2="6"/>
       <line x1="8" y1="12" x2="16" y2="12"/>
       <line x1="11" y1="18" x2="13" y2="18"/>
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
     </svg>
   );
 }
