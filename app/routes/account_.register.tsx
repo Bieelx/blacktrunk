@@ -14,7 +14,38 @@ export async function loader({context}: Route.LoaderArgs) {
   return null;
 }
 
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+
+// ponytail: Cache API counter, not atomic. Fine for a soft 5/min throttle;
+// switch to a Durable Object if exact counting under high concurrency matters.
+async function checkRateLimit(cache: Cache | undefined, request: Request) {
+  if (!cache) return true;
+  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  const key = new Request(`https://rate-limit.local/register/${ip}`);
+  const cached = await cache.match(key);
+  const count = cached ? Number(await cached.text()) : 0;
+
+  if (count >= RATE_LIMIT_MAX) return false;
+
+  await cache.put(
+    key,
+    new Response(String(count + 1), {
+      headers: {'Cache-Control': `max-age=${RATE_LIMIT_WINDOW_SECONDS}`},
+    }),
+  );
+  return true;
+}
+
 export async function action({request, context}: Route.ActionArgs) {
+  const allowed = await checkRateLimit(context.storefront.cache, request);
+  if (!allowed) {
+    return data(
+      {error: 'Muitas tentativas. Aguarde um minuto e tente novamente.'},
+      {status: 429},
+    );
+  }
+
   const form = await request.formData();
   const email = String(form.get('email') ?? '').trim().toLowerCase();
   const name = String(form.get('name') ?? '').trim();

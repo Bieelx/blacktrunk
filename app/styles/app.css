@@ -5558,6 +5558,58 @@ aside[data-aside="filter"] > main {
   display: none;
 }
 
+.excl-upload-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  animation: excl-fade-in 300ms var(--ease-out-quart);
+}
+
+.excl-upload-preview-video {
+  width: 100%;
+  max-height: 280px;
+  border-radius: 10px;
+  background: #000;
+}
+
+.excl-upload-preview-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.excl-upload-preview-info .excl-upload-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.excl-upload-remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(224, 90, 58, 0.12);
+  color: #e05a3a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out-quart);
+}
+
+.excl-upload-remove-btn:hover {
+  background: rgba(224, 90, 58, 0.2);
+}
+
 /* Divider */
 .excl-form-divider {
   border: none;

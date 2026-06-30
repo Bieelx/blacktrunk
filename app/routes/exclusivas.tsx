@@ -1,4 +1,4 @@
-import {memo, useState} from 'react';
+import {memo, useRef, useState} from 'react';
 import {Link, data, useFetcher} from 'react-router';
 import type {MetaFunction} from 'react-router';
 import type {Route} from './+types/exclusivas';
@@ -9,6 +9,31 @@ import {useClientJson} from '~/lib/client-json';
 import {BenchIcon, SquatIcon, LockIcon} from '~/components/Icons';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB — Supabase free tier limit
+const DAILY_SUBMISSION_LIMIT = 3;
+
+// Known container signatures — video.type is client-supplied and trivially spoofable.
+// ponytail: covers mp4/mov/webm/mkv/avi, the formats <input accept="video/*"> realistically produces.
+function hasVideoMagicBytes(bytes: Uint8Array): boolean {
+  if (bytes.length < 12) return false;
+  // ISO-BMFF (mp4, mov, m4v, 3gp): 'ftyp' at offset 4
+  if (
+    bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70
+  ) {
+    return true;
+  }
+  // WebM / Matroska: EBML header 1A 45 DF A3
+  if (bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return true;
+  }
+  // AVI: 'RIFF'....'AVI '
+  if (
+    bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+    bytes[8] === 0x41 && bytes[9] === 0x56 && bytes[10] === 0x49 && bytes[11] === 0x20
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export async function action({request, context}: Route.ActionArgs) {
   // Identify the submitter from the signed OAuth session, NOT from the form.
@@ -44,10 +69,29 @@ export async function action({request, context}: Route.ActionArgs) {
   if (!video.type.startsWith('video/'))
     return data({error: 'Arquivo inválido. Envie um vídeo.'}, {status: 400});
 
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const {count: todayCount, error: countErr} = await context.supabase
+    .from('video_submissions')
+    .select('id', {count: 'exact', head: true})
+    .eq('user_id', user.id)
+    .gte('created_at', startOfDay.toISOString());
+
+  if (countErr) return data({error: 'Erro ao verificar envios. Tente novamente.'}, {status: 500});
+  if ((todayCount ?? 0) >= DAILY_SUBMISSION_LIMIT) {
+    return data(
+      {error: `Limite de ${DAILY_SUBMISSION_LIMIT} envios por dia atingido. Tente novamente amanhã.`},
+      {status: 429},
+    );
+  }
+
   // Upload video to Supabase Storage
   const ext = video.name.split('.').pop() ?? 'mp4';
   const storagePath = `${exercise}/${username}-${Date.now()}.${ext}`;
   const arrayBuffer = await video.arrayBuffer();
+
+  if (!hasVideoMagicBytes(new Uint8Array(arrayBuffer.slice(0, 12))))
+    return data({error: 'Arquivo inválido. Envie um vídeo.'}, {status: 400});
 
   const {error: uploadErr} = await context.supabase.storage
     .from('videos')
@@ -110,6 +154,8 @@ function SubmitForm({username}: {username: string | null}) {
   const fetcher = useFetcher<typeof action>();
   const [exercise, setExercise] = useState<ExclusiveKey>('supino');
   const [fileName, setFileName] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const busy = fetcher.state !== 'idle';
   const success = fetcher.data && 'success' in fetcher.data && fetcher.data.success;
@@ -123,7 +169,16 @@ function SubmitForm({username}: {username: string | null}) {
       e.target.value = '';
       return;
     }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFileName(file.name);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function clearFile() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFileName(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   // Logged out: no form at all. Identity must come from a real session.
@@ -250,30 +305,42 @@ function SubmitForm({username}: {username: string | null}) {
 
         <div className="excl-form-group">
           <label className="excl-form-label">Vídeo do exercício * <span className="excl-form-hint">máx. 50MB</span></label>
-          <label className="excl-upload-btn">
+          <label className="excl-upload-btn" style={previewUrl ? {display: 'none'} : undefined}>
             <input
+              ref={fileInputRef}
               type="file"
               name="video"
               accept="video/*"
               onChange={handleFile}
-              required
+              required={!previewUrl}
             />
-            {fileName ? (
-              <span className="excl-upload-filename">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-                </svg>
-                {fileName}
-              </span>
-            ) : (
-              <span className="excl-upload-placeholder">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-                </svg>
-                Clique para selecionar vídeo
-              </span>
-            )}
+            <span className="excl-upload-placeholder">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+              Clique para selecionar vídeo
+            </span>
           </label>
+
+          {previewUrl && (
+            <div className="excl-upload-preview">
+              <video src={previewUrl} controls className="excl-upload-preview-video" />
+              <div className="excl-upload-preview-info">
+                <span className="excl-upload-filename">{fileName}</span>
+                <button
+                  type="button"
+                  className="excl-upload-remove-btn"
+                  onClick={clearFile}
+                  aria-label="Remover vídeo"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                  Remover
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {error && <p className="excl-form-error">{error}</p>}
