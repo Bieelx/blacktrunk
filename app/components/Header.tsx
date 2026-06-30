@@ -1,5 +1,5 @@
-import {Suspense, useState, useEffect, useRef, useCallback} from 'react';
-import {Await, NavLink, useAsyncValue, Form} from 'react-router';
+import {useState, useEffect, useRef, useCallback} from 'react';
+import {NavLink, Form} from 'react-router';
 import {
   type CartViewPayload,
   useAnalytics,
@@ -12,10 +12,10 @@ import {Avatar} from '~/components/Avatar';
 
 interface HeaderProps {
   header: HeaderQuery;
-  cart: Promise<CartApiQueryFragment | null>;
-  isLoggedIn: Promise<boolean>;
-  customerName: Promise<string | null>;
-  customerAvatar: Promise<string | null>;
+  cart: CartApiQueryFragment | null;
+  isLoggedIn: boolean;
+  customerName: string | null;
+  customerAvatar: string | null;
   publicStoreDomain: string;
 }
 
@@ -179,7 +179,7 @@ function MobileNavPanel({
   isClosing,
   onClose,
 }: {
-  isLoggedIn: Promise<boolean>;
+  isLoggedIn: boolean;
   isClosing: boolean;
   onClose: () => void;
 }) {
@@ -229,8 +229,17 @@ function MobileNavPanel({
         </NavLink>
       </nav>
       <div className="mobile-nav-auth">
-        <Suspense
-          fallback={
+        {isLoggedIn ? (
+          <NavLink
+            to="/account"
+            className="mobile-nav-auth-login"
+            onClick={onClose}
+            prefetch="intent"
+          >
+            Minha Conta
+          </NavLink>
+        ) : (
+          <>
             <NavLink
               to="/account/login"
               className="mobile-nav-auth-login"
@@ -239,42 +248,16 @@ function MobileNavPanel({
             >
               Fazer Login
             </NavLink>
-          }
-        >
-          <Await resolve={isLoggedIn}>
-            {(loggedIn) =>
-              loggedIn ? (
-                <NavLink
-                  to="/account"
-                  className="mobile-nav-auth-login"
-                  onClick={onClose}
-                  prefetch="intent"
-                >
-                  Minha Conta
-                </NavLink>
-              ) : (
-                <>
-                  <NavLink
-                    to="/account/login"
-                    className="mobile-nav-auth-login"
-                    onClick={onClose}
-                    prefetch="intent"
-                  >
-                    Fazer Login
-                  </NavLink>
-                  <NavLink
-                    to="/account/register"
-                    className="mobile-nav-auth-register"
-                    onClick={onClose}
-                    prefetch="intent"
-                  >
-                    Criar Conta
-                  </NavLink>
-                </>
-              )
-            }
-          </Await>
-        </Suspense>
+            <NavLink
+              to="/account/register"
+              className="mobile-nav-auth-register"
+              onClick={onClose}
+              prefetch="intent"
+            >
+              Criar Conta
+            </NavLink>
+          </>
+        )}
       </div>
     </div>
   );
@@ -285,9 +268,9 @@ function AccountDropdown({
   customerName,
   customerAvatar,
 }: {
-  isLoggedIn: Promise<boolean>;
-  customerName: Promise<string | null>;
-  customerAvatar: Promise<string | null>;
+  isLoggedIn: boolean;
+  customerName: string | null;
+  customerAvatar: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -310,31 +293,18 @@ function AccountDropdown({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <Suspense fallback={<AccountIcon />}>
-          <Await resolve={Promise.all([isLoggedIn, customerName, customerAvatar])} errorElement={<AccountIcon />}>
-            {([loggedIn, name, avatar]) =>
-              loggedIn ? (
-                <Avatar name={name} src={avatar} size={26} className="header-account-avatar" />
-              ) : (
-                <AccountIcon />
-              )
-            }
-          </Await>
-        </Suspense>
+        {isLoggedIn ? (
+          <Avatar name={customerName} src={customerAvatar} size={26} className="header-account-avatar" />
+        ) : (
+          <AccountIcon />
+        )}
       </button>
-      {open && (
-        <Suspense fallback={<AccountPopupGuest onClose={() => setOpen(false)} />}>
-          <Await resolve={Promise.all([isLoggedIn, customerName, customerAvatar])} errorElement={<AccountPopupGuest onClose={() => setOpen(false)} />}>
-            {([loggedIn, name, avatar]) =>
-              loggedIn ? (
-                <AccountPopupUser name={name} avatar={avatar} onClose={() => setOpen(false)} />
-              ) : (
-                <AccountPopupGuest onClose={() => setOpen(false)} />
-              )
-            }
-          </Await>
-        </Suspense>
-      )}
+      {open &&
+        (isLoggedIn ? (
+          <AccountPopupUser name={customerName} avatar={customerAvatar} onClose={() => setOpen(false)} />
+        ) : (
+          <AccountPopupGuest onClose={() => setOpen(false)} />
+        ))}
     </div>
   );
 }
@@ -522,18 +492,7 @@ function CartBadge({count}: {count: number}) {
   );
 }
 
-function CartToggle({cart}: Pick<HeaderProps, 'cart'>) {
-  return (
-    <Suspense fallback={<CartBadge count={0} />}>
-      <Await resolve={cart}>
-        <CartBanner />
-      </Await>
-    </Suspense>
-  );
-}
-
-function CartBanner() {
-  const originalCart = useAsyncValue() as CartApiQueryFragment | null;
+function CartToggle({cart: originalCart}: Pick<HeaderProps, 'cart'>) {
   const cart = useOptimisticCart(originalCart);
   return <CartBadge count={cart?.totalQuantity ?? 0} />;
 }

@@ -1,5 +1,5 @@
-import {Await, Link, Outlet} from 'react-router';
-import {Suspense, useId} from 'react';
+import {Link, Outlet} from 'react-router';
+import {useId} from 'react';
 import type {
   CartApiQueryFragment,
   FooterQuery,
@@ -17,12 +17,12 @@ import {
 import {SearchResultsPredictive} from '~/components/SearchResultsPredictive';
 
 interface PageLayoutProps {
-  cart: Promise<CartApiQueryFragment | null>;
+  cart: CartApiQueryFragment | null;
   footer: Promise<FooterQuery | null>;
   header: HeaderQuery;
-  isLoggedIn: Promise<boolean>;
-  customerName: Promise<string | null>;
-  customerAvatar: Promise<string | null>;
+  isLoggedIn: boolean;
+  customerName: string | null;
+  customerAvatar: string | null;
   publicStoreDomain: string;
 }
 
@@ -63,13 +63,7 @@ export function PageLayout({
 function CartAside({cart}: {cart: PageLayoutProps['cart']}) {
   return (
     <Aside type="cart" heading="CARRINHO">
-      <Suspense fallback={<p>Loading cart ...</p>}>
-        <Await resolve={cart}>
-          {(cart) => {
-            return <CartMain cart={cart} layout="aside" />;
-          }}
-        </Await>
-      </Suspense>
+      <CartMain cart={cart} layout="aside" />
     </Aside>
   );
 }

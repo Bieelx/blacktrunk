@@ -7,7 +7,6 @@ import {
   useOptimisticVariant,
   getProductOptions,
   getAdjacentAndFirstAvailableVariants,
-  useSelectedOptionInUrlParam,
   Image,
 } from '@shopify/hydrogen';
 import {ProductPrice} from '~/components/ProductPrice';
@@ -77,8 +76,6 @@ export default function Product() {
     product.selectedOrFirstAvailableVariant,
     getAdjacentAndFirstAvailableVariants(product),
   );
-
-  useSelectedOptionInUrlParam(selectedVariant.selectedOptions);
 
   const productOptions = getProductOptions({
     ...product,
